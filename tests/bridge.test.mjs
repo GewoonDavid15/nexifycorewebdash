@@ -25,6 +25,18 @@ globalThis.fetch=async (_url,opts)=>{
       memory.set(key,val);result='OK';break;
     }
     case 'GET':result=memory.get(args[0])??null;break;
+    case 'EVAL':{
+      const [script,count,requestKey,pendingKey,oldRaw,newRaw,id,ttl]=args;
+      assert.equal(Number(count),2);
+      assert.equal(typeof script,'string');
+      assert.ok(Number(ttl)>0);
+      const current=memory.get(requestKey);
+      if(current===undefined){result=-1;break;}
+      if(current!==oldRaw){result=0;break;}
+      memory.set(requestKey,newRaw);
+      lists.set(pendingKey,(lists.get(pendingKey)||[]).filter(v=>v!==id));
+      result=1;break;
+    }
     case 'DEL':result=memory.delete(args[0])?1:0;break;
     case 'LRANGE':{
       const a=lists.get(args[0])||[];result=a.slice(args[1],args[2]+1);break;
