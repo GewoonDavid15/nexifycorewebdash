@@ -40,9 +40,17 @@ Read `docs/CODEX_HANDOFF.md` before making significant changes. The repository c
 ## Deployment and verification
 - GitHub repository: `GewoonDavid15/nexifycorewebdash`; Vercel project: `nexifycorewebdash`.
 - Production dashboard: `https://nexifycorewebdash.vercel.app`.
-- Latest confirmed web build at handoff ran **18 tests, 0 failures**. This does **not** prove that live MC-Node API access or Cloud Bridge sync works.
+- Latest confirmed dashboard upgrade ran **22 tests, 0 failures** with production Next.js build READY. This does **not** prove that live MC-Node API access or Cloud Bridge sync works.
 - Preserve automatic GitHub → Vercel deployment; review tests, build logs and live status before reporting success.
 - Prefer small, reviewable commits/PRs. Never mutate live server state or rotate real credentials merely because a code test passed.
 
 ## Next work
 Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit request.
+
+## Control Center 0.2 updates
+- The UI now has four user-facing sections: **Overzicht**, **MC-Node hosting**, **Back-ups & taken**, and **Activiteit**. Do not remove these sections without request.
+- Hosting GET responses may include safe read-only metadata for plugins, backups, schedules and activity, with access diagnostics when optional permissions are missing. Never return backup download links, arbitrary file contents or token-bearing metadata.
+- Cloud Bridge backup requests require explicit browser confirmation and an atomic Redis 60-second cooldown (`keys.backupCooldown`); the Minecraft console still approves execution.
+- The Activity tab offers secret-free JSON diagnostics copied on user action; keep credentials, server file paths, IPs and player identities out of that export.
+- Next.js and React versions are pinned for security; run `npm run build` before any production change and review dependency releases before bumping versions.
+- UI status never proves the API was live tested in MC-Node. Avoid fake demo values or "connected" indicators without an actual heartbeat.
