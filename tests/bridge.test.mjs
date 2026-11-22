@@ -44,10 +44,10 @@ test('agent rejects wrong secret',async()=>{
   const r=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.2.0'}));assert.equal(r.status,401);
 });
 test('telemetry sync stores status; viewer must be signed in',async()=>{
-  let r=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.2.0',tps:20,mspt:17,players:3}, {'Authorization':'Bearer '+process.env.AGENT_SECRET}));
+  let r=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.4.0',tps:20,mspt:17,players:3,startup_high:1,startup_warnings:4}, {'Authorization':'Bearer '+process.env.AGENT_SECRET}));
   assert.equal(r.status,200);
   r=await status({cookies:new Map()});assert.equal(r.status,401);
-  r=await status(auth());const payload=await r.json();assert.equal(payload.status.tps,20);assert.equal(payload.status.players,3);assert.equal(payload.online,true);
+  r=await status(auth());const payload=await r.json();assert.equal(payload.status.tps,20);assert.equal(payload.status.players,3);assert.equal(payload.status.startup_high,1);assert.equal(payload.status.startup_warnings,4);assert.equal(payload.online,true);
 });
 test('dashboard creates safe request, agent receives and acknowledges it',async()=>{
   const user=auth();Object.assign(user,{url:origin+'/api/requests',headers:new Headers({origin}),text:async()=>JSON.stringify({action:'backup.now'})});
@@ -77,7 +77,7 @@ test('diagnostics request is read-only, idempotent and strips sensitive fields',
   const queued=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.3.0',uptime_seconds:42,max_players:30},authHeader));
   const job=(await queued.json()).request;
   assert.equal(job.action,'diagnostics.capture');assert.equal(job.id,ticket.id);
-  const payload={id:ticket.id,report:{tps:19.5,mspt:24,players:3,max_players:30,uptime_seconds:42,nexify_security:true,plugin_version:'2.3.0',player_uuid:'PRIVATE',console:'PRIVATE',server_ip:'PRIVATE',world_path:'PRIVATE'}};
+  const payload={id:ticket.id,report:{tps:19.5,mspt:24,players:3,max_players:30,uptime_seconds:42,nexify_security:true,startup_high:1,startup_warnings:4,plugin_version:'2.4.0',player_uuid:'PRIVATE',console:'PRIVATE',server_ip:'PRIVATE',world_path:'PRIVATE'}};
   const denied=await reportDiagnostics(request('/api/agent/report','POST',payload));
   assert.equal(denied.status,401);
   const accepted=await reportDiagnostics(request('/api/agent/report','POST',payload,authHeader));
@@ -89,6 +89,8 @@ test('diagnostics request is read-only, idempotent and strips sensitive fields',
   assert.equal(completed.state,'completed');
   assert.equal(completed.report.tps,19.5);
   assert.equal(completed.report.nexify_security,true);
+  assert.equal(completed.report.startup_high,1);
+  assert.equal(completed.report.startup_warnings,4);
   for(const prohibited of ['PRIVATE','player_uuid','server_ip','world_path','console'])assert.ok(!JSON.stringify(completed).includes(prohibited));
   const noOtherJobs=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.3.0'},authHeader));
   assert.equal((await noOtherJobs.json()).request,null);
