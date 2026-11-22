@@ -141,3 +141,11 @@ Laatst geverifieerde Vercel-build: **43 tests geslaagd, 0 fouten, deployment REA
 Nieuw dashboardtabblad **Systeemcontrole** met een sessieafgeschermde API op `/api/system/readiness`. Controleert of scrypt-login, TOTP, de dashboard-sessiesleutel, Cloud Bridge, de bestaande Redis-database en optionele MC-Node-koppeling correct zijn ingesteld. De Redis-verbinding wordt met een echte PING getest; het statusoverzicht toont uitsluitend veilige labels en booleans, **nooit geheime waarden**. De gebruiker ziet het vervaltijdstip van de huidige sessie en kan op het eigen apparaat uitloggen.
 
 **Belangrijk:** `Ingesteld` betekent niet automatisch live verbonden met de Minecraft-JAR. Er bestaan nog geen individuele webaccounts of uitgebreide rollenrechten. Lees `docs/SECURITY_READINESS.md` en de bijbehorende nieuwe GitHub Issue #3 voor de veilige migratieaanpak.
+
+
+## Enterprise 3.0 — voorbereiding multi-account en rollen
+Het dashboard bevat nu onder **Systeemcontrole** een read-only rollenoverzicht: Viewer, Operator, Administrator en Eigenaar. De toekomstige autorisaties zijn vastgelegd in `lib/rbac.js`; onbekende of gevaarlijke serveracties worden geweigerd.
+
+Er is ook een afzonderlijk **niet-geactiveerd** accountmodel en sessiesysteem voorbereid: individuele tokenintrekking, SHA256-gehashte Redis-sleutels, zes uur maximale sessieduur en blokkering na accountschorsing of rolwijziging. Dit verandert niets aan je bestaande inlogscherm of Minecraft-server en creëert geen gebruikersaccounts.
+
+**Nog niet klaar:** echte accountregistratie, persoonlijke 2FA, gebruikersbeheer, server-side RBAC op alle bestaande API-routes en de veilige owner-migratie. Zie `docs/RBAC_FOUNDATION.md` en GitHub Issue #3. Nieuwe geheimen zijn niet nodig en er wordt geen tweede Redis-database aangemaakt.
