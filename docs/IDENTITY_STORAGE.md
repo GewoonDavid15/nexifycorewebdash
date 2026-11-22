@@ -106,3 +106,14 @@ De module `lib/account-login.js` bevat de toekomstige controle van gebruikersnaa
 - Redis-scripts moeten op een **afzonderlijke** stagingomgeving met echte Upstash `EVAL` worden getest vóór activatie.
 - De vaultkey is nog **niet** op Vercel toegevoegd en er zijn **geen** wachtwoorden of TOTP-geheimen naar live Redis geschreven.
 - De huidige eigenaar-login en alle bestaande MC-Node-integraties blijven ongewijzigd. De Pull Request blijft concept totdat staging, recovery en autorisatie van alle dashboardroutes aantoonbaar getest zijn.
+
+
+### Extra verificatie met echte Redis (zonder nieuwe database)
+
+De GitHub Actions-workflow start voor pull requests tijdelijk een **Redis 7-container** en voert `scripts/verify-redis-lua.mjs` uit. Dit programma gebruikt uitsluitend localhost (`127.0.0.1:6379`), creëert een willekeurige tijdelijke sleutelprefix en verwijdert die na de test. Het controleert op een echte Redis-engine het atomaire accountaanmaken, eenmalig uitnodigen, MFA-accountactivering, compare-and-set rolwijzigingen, bevoegdheidsintrekking en weigering van replay.
+
+Bij de laatste gecontroleerde workflow waren **91 unit-/integratietests geslaagd, 0 mislukt**, de Redis-Lua-controle geslaagd en de Next.js-build succesvol. Deze test gebruikte **niet** de echte Upstash-accountdatabase, MC-Node-server of productie-Vercel-instellingen.
+
+De Upstash REST API ondersteunt `EVAL` en scripting volgens de actuele Upstash-documentatie, maar controleer de specifieke productieomgeving nog op staging voordat de nieuwe identiteitstools worden gebruikt.
+
+**Nog niet geïmplementeerd:** veilige publieke enrollment-HTTP-routes, individuele 2FA-installatie via een gebruikersinterface, rate limits en account recovery, doorvoeren van RBAC op alle bestaande API-routes, en eigenaar-bootstrap. De huidige website blijft gewoon de originele eenpersoonslogin gebruiken.
