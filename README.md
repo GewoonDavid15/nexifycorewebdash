@@ -92,7 +92,7 @@ Het dashboard is vernieuwd met vier onderdelen:
 - **Back-ups & taken:** bestaande hostingback-ups en schedules alleen-lezen, daarnaast een beperkt Cloud Bridge-back-upverzoek met expliciete bevestiging en console-goedkeuring. Twee back-upverzoeken binnen 60 seconden worden afgewezen met een Redis-cooldown.
 - **Activiteit:** hostinggebeurtenissen zonder gevoelige metadata, status van optionele API-rechten, en een knop om een **veilige diagnose zonder secrets** te kopiëren.
 
-**Teststatus bij deze update:** 22 geautomatiseerde tests geslaagd en Next.js-productiebuild op Vercel READY. Dat bevestigt het bouwen en de mocks, niet dat Minecraft momenteel een live heartbeat verstuurt of MC-Node werkelijk bereikbaar is. Test dit vanuit het ingelogde dashboard.
+**Teststatus bij deze update:** 30 geautomatiseerde tests geslaagd en Next.js-productiebuild op Vercel READY. Dat bevestigt het bouwen en de mocks, niet dat Minecraft momenteel een live heartbeat verstuurt of MC-Node werkelijk bereikbaar is. Test dit vanuit het ingelogde dashboard.
 
 ### Beveiligings- en onderhoudsverbeteringen
 
@@ -104,3 +104,22 @@ Het dashboard is vernieuwd met vier onderdelen:
 - Een willekeurig falende sessietest is hersteld zodat CI betrouwbaarder is.
 
 **Let op:** het dashboard kan geen server verwijderen, bestanden aanpassen, consolecommando's uitvoeren of back-ups herstellen. Daarvoor is een afzonderlijke geautoriseerde connector nodig met expliciete toestemming en auditlog. Houd de Pterodactyl Client API-sleutel server-side. Roteer eerder gedeelde inlog- en API-secrets zonder ze in GitHub of een chat te plaatsen. Een geslaagde Vercel-deployment is niet automatisch bewijs van een werkende ChatGPT↔MC-Node-koppeling.
+
+
+## Nexify Enterprise — Cloud Protocol 2.0 (uitbreiding)
+
+De volgende webfuncties zijn toegevoegd:
+
+- **Op aanvraag diagnostiek** via de strikte actielijst `diagnostics.capture`, verwerkt door NexifyStaff **2.3.0** op Minecraft. Rapportages bevatten uitsluitend allowlisted anonieme prestatiewaarden. Ze worden met agentsleutel ingediend bij `/api/agent/report` en zichtbaar in **Activiteit**.
+- **Historische prestatiegrafiek** via `/api/history`: maximaal één anoniem datapunt per vijf minuten en maximaal 288 punten, opgeslagen in je **bestaande** Redis-database.
+- **Gezondheidswaarschuwingen** voor lage TPS, hoge MSPT en bijna vol geheugen/opslag, zonder automatische serveringrepen.
+- **Lokale Codex MCP-koppeling** (`tools/mcnode-mcp`) met vijf read-only MC-Node-tools; dit is een apart te installeren hulpmiddel voor Codex CLI/IDE en geeft ChatGPT niet automatisch toegang.
+- Extra regressietests voor agentauthenticatie, diagnoseprivacy, back-upcooldown, MCP-toolvergunningen, gezondheid en historische gegevens.
+
+Documenten:
+- `docs/CLOUD_PROTOCOL_V2.md`: exacte allowlist en API-contract.
+- `docs/MINECRAFT_2_RELEASE.md`: experimentele Minecraft-JAR, checksums en veilige stagingupdate.
+- `docs/ENTERPRISE_3_ROADMAP.md`: omvangrijke roadmap en heldere status per onderdeel.
+- `tools/mcnode-mcp/README.md`: Codex MCP lokaal installeren zonder API-sleutels in git.
+
+**Status:** de laatste gecontroleerde Vercel-builds hadden 30 geslaagde tests. De volledige Minecraft 2.0-broncode is apart als ZIP gebouwd en staat nog niet in deze webrepository; de live MC-Node Java25-server is niet aangepast. De remote diagnosefunctie kan pas antwoorden wanneer NexifyStaff 2.3.0 daadwerkelijk draait en de geroteerde Cloud Bridge-sleutel klopt. Er is geen betaalde Redis-database toegevoegd.
