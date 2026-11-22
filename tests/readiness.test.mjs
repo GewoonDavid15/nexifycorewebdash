@@ -75,6 +75,10 @@ test('authenticated readiness performs safe Redis PING with no credentials in re
     const body=await res.json();
     assert.equal(body.mode,'read_only');
     assert.equal(body.redis_connection,'connected');
+    assert.ok(Date.parse(body.session.expires_at)>Date.now());
+    assert.ok(body.session.remaining_minutes>0&&body.session.remaining_minutes<=360);
+    assert.ok(!JSON.stringify(body.session).includes('nexify_cloud_session'));
+
     assert.equal(calls,1);
     const output=JSON.stringify(body);
     for(const [key,value] of Object.entries(valid))assert.ok(!output.includes(value),'Secret leaked for '+key);
