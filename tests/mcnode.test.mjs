@@ -54,9 +54,11 @@ test('MC-Node overview returns only safe server info using GET requests',async()
     assert.equal(info.state,'running');
     assert.equal(info.cpu,12.5);
     assert.equal(info.pluginStatus,'available');
+    assert.equal(info.backupStatus,'available');
+    assert.equal(info.scheduleStatus,'available');
     assert.deepEqual(info.plugins,[{name:'NexifyStaff.jar',size:1234}]);
     assert.equal(JSON.stringify(info).includes('do-not-send'),false);
-    assert.ok(seen.length===3);
+    assert.equal(seen.length,6);
     assert.ok(seen.every(x=>x.method==='GET'));
     assert.ok(seen.every(x=>x.auth==='Bearer '+valid.MCNODE_CLIENT_API_KEY));
   }finally{globalThis.fetch=before;}
