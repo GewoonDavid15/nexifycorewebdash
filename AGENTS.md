@@ -74,3 +74,11 @@ Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit reques
 - Historical performance and audit routes enforce 24h/30d visibility windows. Do not create a second Redis database.
 - `.github/workflows/ci.yml` provides PR/manual tests; the latest Vercel code check passed **43/43 tests**.
 - Java source is packaged separately and was **not** committed in full to this GitHub web repository; don't pretend a Java production deployment has occurred. Java25/MC-Node runtime verification is still missing.
+
+
+## Systemcontrole / identity safety (latest)
+
+- `lib/readiness.js` and `app/api/system/readiness/route.js` implement a privacy-safe configuration assessment. Return **only safe status fields**, never raw values, hashes, panel URLs, or secrets. The Redis PING is an actual backend connectivity check.
+- The UI has a fifth tab **Systeemcontrole**. It shows readiness, signed-session expiry and a logout button for the current device.
+- It is still a **single-admin dashboard**. Do NOT claim multi-account RBAC or global session revocation is implemented. See `docs/SECURITY_READINESS.md` and GitHub Issue #3.
+- Do not change owner credentials or login cookie format without a staging-tested migration and rollback. Any new roles must be enforced server-side on every route.
