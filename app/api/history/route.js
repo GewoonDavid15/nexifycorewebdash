@@ -14,7 +14,8 @@ export async function GET(req) {
     for(const item of rows||[]){
       try{
         const raw=JSON.parse(item);
-        if(typeof raw.at!=='string'||Number.isNaN(Date.parse(raw.at)))continue;
+        const stamp=typeof raw.at==='string'?Date.parse(raw.at):NaN;
+        if(!Number.isFinite(stamp)||stamp<lower||stamp>upper)continue;
         const n=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<1e9?v:null;
         points.push({at:raw.at,tps:n(raw.tps),mspt:n(raw.mspt),players:n(raw.players)});
       }catch{}
