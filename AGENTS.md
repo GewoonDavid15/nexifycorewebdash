@@ -40,7 +40,7 @@ Read `docs/CODEX_HANDOFF.md` before making significant changes. The repository c
 ## Deployment and verification
 - GitHub repository: `GewoonDavid15/nexifycorewebdash`; Vercel project: `nexifycorewebdash`.
 - Production dashboard: `https://nexifycorewebdash.vercel.app`.
-- Latest confirmed dashboard upgrade ran **22 tests, 0 failures** with production Next.js build READY. This does **not** prove that live MC-Node API access or Cloud Bridge sync works.
+- Latest confirmed dashboard upgrade ran **30 tests, 0 failures** with production Next.js build READY. This does **not** prove that live MC-Node API access or Cloud Bridge sync works.
 - Preserve automatic GitHub → Vercel deployment; review tests, build logs and live status before reporting success.
 - Prefer small, reviewable commits/PRs. Never mutate live server state or rotate real credentials merely because a code test passed.
 
@@ -54,3 +54,12 @@ Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit reques
 - The Activity tab offers secret-free JSON diagnostics copied on user action; keep credentials, server file paths, IPs and player identities out of that export.
 - Next.js and React versions are pinned for security; run `npm run build` before any production change and review dependency releases before bumping versions.
 - UI status never proves the API was live tested in MC-Node. Avoid fake demo values or "connected" indicators without an actual heartbeat.
+
+## Nexify 2.0 web / Java protocol update
+- Read `docs/CLOUD_PROTOCOL_V2.md`, `docs/MINECRAFT_2_RELEASE.md`, and `docs/ENTERPRISE_3_ROADMAP.md` before expanding server control.
+- Web endpoints now support `diagnostics.capture` with strict JSON report filtering via `lib/diagnostics.js` and `app/api/agent/report/route.js`; Cloud Bridge still supports console-gated `backup.now`.
+- New Java NexifyStaff 2.3.0 source and experimental 2.0.0 Paperclip bundle were generated separately from existing Minecraft 1.9 source. They were **not installed on the live MC-Node server**, and the full Java source is not yet in this GitHub repo.
+- `/api/history` keeps max 288 data points with an Upstash rate gate of 5 minutes. Never collect player identities, IPs, world paths or raw console output.
+- `lib/health.js` provides non-destructive health alerts based on actual measurements. Never imply it repairs or monitors the server continuously by itself.
+- Local read-only Codex MCP implementation: `tools/mcnode-mcp/server.mjs`; setup instructions in `tools/mcnode-mcp/README.md`. This does not automatically authorize ChatGPT to control MC-Node.
+- If a subsequent task needs write actions, design scoped permissions, explicit user approval, audit and recoverable backups first. Never add general shell, uncontrolled file writes, reinstalls or world restorations to a public endpoint.
