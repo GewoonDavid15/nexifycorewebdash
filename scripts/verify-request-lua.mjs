@@ -5,6 +5,7 @@ import {promisify} from 'node:util';
 import {randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {transitionRequest} from '../lib/request-transitions.js';
+import {createRequest} from '../lib/request-creation.js';
 import {keys} from '../lib/redis.js';
 
 const exec=promisify(execFile);
@@ -58,7 +59,29 @@ async function check(){
     assert.equal(expired.outcome,'expired');
     assert.equal(JSON.parse(await cmd('GET',requestKey)).state,'pending');
     assert.equal(await cmd('LLEN',keys.pending),'1');
-    console.log('Real Redis 7: concurrent acknowledgement/report, replay, expiry and atomic queue mutation PASS');
+    // Creation also uses an atomic Redis EVAL instead of GET/SET/LPUSH races.
+    await cmd('DEL',keys.pending,keys.backupCooldown,keys.diagnosticsCooldown,keys.recent);
+    const createdIds=Array.from({length:14},()=>randomUUID());
+    const attemptsCreate=await Promise.all(createdIds.map(requestId=>createRequest({
+      action:'backup.now',id:requestId,redisFn:adapter,now
+    })));
+    assert.equal(attemptsCreate.filter(v=>v.outcome==='created').length,1);
+    assert.equal(attemptsCreate.filter(v=>v.outcome==='cooldown').length,13);
+    assert.equal(await cmd('LLEN',keys.pending),'1');
+    assert.equal(await cmd('LLEN',keys.recent),'1');
+    await cmd('DEL',keys.pending,keys.backupCooldown,keys.diagnosticsCooldown);
+    for(let n=0;n<9;n++)await cmd('LPUSH',keys.pending,'seed-'+n);
+    const finalIds=[randomUUID(),randomUUID()];
+    const capacity=await Promise.all([
+      createRequest({action:'backup.now',id:finalIds[0],redisFn:adapter,now}),
+      createRequest({action:'diagnostics.capture',id:finalIds[1],redisFn:adapter,now})
+    ]);
+    assert.equal(capacity.filter(v=>v.outcome==='created').length,1);
+    assert.equal(capacity.filter(v=>v.outcome==='queue_full').length,1);
+    assert.equal(await cmd('LLEN',keys.pending),'10');
+    await cmd('DEL',...createdIds.map(keys.request),...finalIds.map(keys.request),
+      keys.pending,keys.backupCooldown,keys.diagnosticsCooldown,keys.recent);
+    console.log('Real Redis 7: atomic transitions, cooldown, queue capacity and concurrent creation PASS');
   }finally{
     await cmd('DEL',requestKey,keys.pending);
   }
