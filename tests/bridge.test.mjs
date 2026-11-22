@@ -26,7 +26,21 @@ globalThis.fetch=async (_url,opts)=>{
     }
     case 'GET':result=memory.get(args[0])??null;break;
     case 'EVAL':{
-      const [script,count,requestKey,pendingKey,oldRaw,newRaw,id,ttl]=args;
+      const [script,count,...rest]=args;
+      if(Number(count)===4){
+        const [pendingKey,cooldown,requestKey,recentKey,id,record,maxPending,cooldownTtl,recordTtl]=rest;
+        assert.equal(typeof script,'string');
+        assert.ok(Number(cooldownTtl)>0&&Number(recordTtl)>0);
+        if((lists.get(pendingKey)||[]).length>=Number(maxPending)){result=-1;break;}
+        if(memory.has(cooldown)){result=0;break;}
+        if(memory.has(requestKey)){result=-2;break;}
+        memory.set(cooldown,'1');
+        memory.set(requestKey,record);
+        lists.set(pendingKey,[id,...(lists.get(pendingKey)||[])]);
+        lists.set(recentKey,[id,...(lists.get(recentKey)||[])].slice(0,50));
+        result=1;break;
+      }
+      const [requestKey,pendingKey,oldRaw,newRaw,id,ttl]=rest;
       assert.equal(Number(count),2);
       assert.equal(typeof script,'string');
       assert.ok(Number(ttl)>0);
