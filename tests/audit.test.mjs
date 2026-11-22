@@ -26,7 +26,7 @@ test('audit events contain only safe properties, never credentials or user ident
   assert.equal(results.length,1);
   assert.deepEqual(results[0],created);
   assert.ok(commands.some(x=>x[0]==='EXPIRE'&&x[2]===2592000));
-  assert.ok(commands.some(x=>x[0]==='LTRIM'&&x[2]===199));
+  assert.ok(commands.some(x=>x[0]==='LTRIM'&&x[3]===199));
   assert.equal(commands[0][1],keys.audit);
 });
 
