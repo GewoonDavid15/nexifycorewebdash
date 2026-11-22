@@ -83,3 +83,26 @@ De module wordt offline getest in `tests/account-vault.test.mjs` met willekeurig
 - Er is geen e-mail-, Discord-, website- of ChatGPT-route gemaakt die uitnodigingstokens verstuurt of gebruikt. Een beveiligde online enrollmentflow vereist nog nieuwe, geteste endpoints, rate limits, CSRF-beveiliging en heldere gebruikersbevestiging.
 
 Deze regels zijn met mocks getest in `tests/account-invitations.test.mjs`. Ze bewijzen niet dat de Lua-scripts al op een echte Upstash-database zijn uitgevoerd.
+
+## Fase 3 — veilige accountactivatie en individuele login (prototype)
+
+De interne module `lib/account-activation.js` activeert uitgenodigde accounts alleen nadat het systeem **alle** controles heeft uitgevoerd:
+
+1. Een nog geldig, eenmalig uitnodigingstoken moet bij het juiste account horen.
+2. Een persoonlijk wachtwoord van 14–128 tekens moet voldoen aan de invoercontroles en wordt gehasht met het bestaande scrypt-formaat.
+3. Een geldige zescijferige authenticatorcode moet overeenkomen met het gekozen TOTP-geheim.
+4. Het TOTP-geheim wordt met de aparte `NEXIFY_ACCOUNT_VAULT_KEY` en AES-256-GCM versleuteld.
+5. Eén Redis-Lua-transactie controleert token, vervaltijd, accountstatus, rol en sessieversie, schrijft pas daarna de actieve accountrecord en vernietigt in dezelfde transactie de uitnodiging.
+
+Bij een ongeldige of verlopen code, een ontbrekende vaultkey of een tussentijdse accountwijziging blijft het account uitgenodigd of geschorst. Er wordt nooit eerst een uitnodiging verwijderd om daarna met een andere API-call te activeren.
+
+De module `lib/account-login.js` bevat de toekomstige controle van gebruikersnaam, scrypt-wachtwoord en de per-account ontsleutelde TOTP-code. Na een geslaagde combinatie kan het bestaande geïsoleerde account-sessiesysteem een token uitgeven. Redis `SET ... NX EX` voorkomt hergebruik van dezelfde 30-seconden TOTP-code voor een tweede accountsessie.
+
+**Er zijn nog steeds geen HTTP-endpoints voor registratie, accountactivatie of deze login.** Dit is alleen een server-side prototype dat met gemockte Redis-transacties wordt getest. Voor een publieke activering ontbreken nog webformulier, individuele uitnodigingsdistributie, server-side rate limiting, CSRF/cookiebeleid, accountoverzicht, logging en gecontroleerde eigenaar-bootstrap.
+
+### Aanvullende acceptatiechecks
+
+- Tests: `tests/account-enrollment.test.mjs` (geldige en ongeldige enrollment, expiratie, concurrerende activatie, versies, inloggen, wachtwoorden, TOTP-hergebruik en sessierechten).
+- Redis-scripts moeten op een **afzonderlijke** stagingomgeving met echte Upstash `EVAL` worden getest vóór activatie.
+- De vaultkey is nog **niet** op Vercel toegevoegd en er zijn **geen** wachtwoorden of TOTP-geheimen naar live Redis geschreven.
+- De huidige eigenaar-login en alle bestaande MC-Node-integraties blijven ongewijzigd. De Pull Request blijft concept totdat staging, recovery en autorisatie van alle dashboardroutes aantoonbaar getest zijn.
