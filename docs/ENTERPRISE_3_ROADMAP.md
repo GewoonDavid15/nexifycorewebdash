@@ -56,3 +56,16 @@ Status op 22 november 2026. Dit is een planning voor het volledige platform, gee
 
 ## Definitie van 'af'
 Een feature is pas klaar na vier afzonderlijke bewijsstappen: (1) code gereviewd, (2) automatische tests geslaagd, (3) staging/live deployment goed, (4) echte MC-Node/Minecraft werking en herstelpad gevalideerd. Gebruik deze statuswoorden ook in eindrapportages.
+
+
+## Nieuwe uitgevoerde mijlpalen — 22 november 2026
+
+- De Cloud Bridge-wachtrij ruimt verlopen opdrachten na 20 minuten veilig op, zonder alsnog uitvoering aan te vragen.
+- Er is een afgeschermd operationeel activiteitenlog met maximaal 200 acties en maximaal 30 dagen zichtbaarheidsretentie.
+- Prestatiegrafieken filteren oude/toekomstige datapunten en de gedeelde Redis-historie krijgt ook een vervaltijd.
+- NexifyStaff **2.4.0** en Nexify Server **2.0.1 EXPERIMENTAL** zijn lokaal gebouwd en doorgelicht. De startupcontrole verstuurt uitsluitend geaggregeerde aantallen waarschuwingen.
+- Releasepakket bevat checksummanifest en een offline integriteitschecker die een bewust veranderd bestand afkeurde.
+- `.github/workflows/ci.yml` controleert pull requests en kan handmatig worden gestart; geen productiegeheimen nodig.
+- De laatst gecontroleerde Next.js/Vercel-build bevatte **43 geslaagde tests**.
+
+**Nog open:** echte MC-Node Java25-stagingtest, geheimrotatie, herstelbare externe backups, import van volledige Java-broncode in een aparte repository, RBAC-webaccounts, echte ChatGPT-connector en alle overige geplande modules. Maak geen fictieve statusclaims voor deze onderdelen.
