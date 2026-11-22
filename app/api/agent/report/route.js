@@ -1,6 +1,7 @@
 import {isAgent,json} from '../../../../lib/security.js';
 import {redis,keys} from '../../../../lib/redis.js';
 import {sanitizeDiagnostics} from '../../../../lib/diagnostics.js';
+import {writeAudit} from '../../../../lib/audit.js';
 
 export const runtime='nodejs';
 
@@ -22,6 +23,7 @@ export async function POST(req) {
     const updated={...record,state:'completed',completed_at:new Date().toISOString(),report};
     await redis('SET',keys.request(body.id),JSON.stringify(updated),'EX',2592000);
     await redis('LREM',keys.pending,0,body.id);
+    try{await writeAudit({action:record.action,state:'completed',source:'minecraft-agent',request_id:body.id});}catch{}
     return json({ok:true});
   } catch {
     return json({error:'Cloud storage temporarily unavailable'},503);
