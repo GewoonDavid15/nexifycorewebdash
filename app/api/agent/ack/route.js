@@ -1,5 +1,6 @@
 import {isAgent,json} from '../../../../lib/security.js';
 import {redis,keys} from '../../../../lib/redis.js';
+import {writeAudit} from '../../../../lib/audit.js';
 export const runtime='nodejs';
 export async function POST(req){
   if(!isAgent(req))return json({error:'Unauthorized'},401);
@@ -13,6 +14,7 @@ export async function POST(req){
       record.state='awaiting_console';record.local_id=local_id;record.acknowledged_at=new Date().toISOString();
       await redis('SET',keys.request(id),JSON.stringify(record),'EX',2592000);
       await redis('LREM',keys.pending,0,id);
+      try{await writeAudit({action:record.action,state:'awaiting_console',source:'minecraft-agent',request_id:id});}catch{}
     }
     return json({ok:true});
   }catch{return json({error:'Cloud storage temporarily unavailable'},503);}
