@@ -16,7 +16,7 @@ test('HTTPS and credentials are required',()=>{
   assert.throws(()=>redisConfiguration({KV_REST_API_URL:'https://existing.upstash.io',KV_REST_API_TOKEN:'short'}),/token/);
 });
 test('all Nexify keys are namespaced to avoid other projects',()=>{
-  const list=[keys.status,keys.pending,keys.recent,keys.request('id'),keys.login('ip'),keys.totpUsed(7),keys.backupCooldown];
+  const list=[keys.status,keys.pending,keys.recent,keys.request('id'),keys.login('ip'),keys.totpUsed(7),keys.backupCooldown,keys.diagnosticsCooldown];
   assert.equal(new Set(list).size,list.length);
   assert.ok(list.every(x=>x.startsWith('nexify:cloud:main:v1:')));
 });
