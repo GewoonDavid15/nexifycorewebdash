@@ -6,6 +6,7 @@ import {POST as ack} from '../app/api/agent/ack/route.js';
 import {POST as reportDiagnostics} from '../app/api/agent/report/route.js';
 import {GET as status} from '../app/api/status/route.js';
 import {GET as historyRoute} from '../app/api/history/route.js';
+import {keys} from '../lib/redis.js';
 import {GET as list,POST as create} from '../app/api/requests/route.js';
 
 process.env.AGENT_SECRET='a'.repeat(64);
@@ -32,6 +33,7 @@ globalThis.fetch=async (_url,opts)=>{
     case 'LPUSH':lists.set(args[0],[args[1],...(lists.get(args[0])||[])]);result=lists.get(args[0]).length;break;
     case 'LTRIM':lists.set(args[0],(lists.get(args[0])||[]).slice(args[1],args[2]+1));result='OK';break;
     case 'LREM':lists.set(args[0],(lists.get(args[0])||[]).filter(v=>v!==args[2]));result=1;break;
+    case 'EXPIRE':result=1;break;
     default:throw new Error('Unexpected redis command '+cmd);
   }
   return Response.json({result});
@@ -111,6 +113,22 @@ test('historical performance samples are private and require login',async()=>{
   assert.ok(payload.points.length<=288);
   assert.ok(payload.points.every(row=>Object.keys(row).every(key=>['at','tps','mspt','players'].includes(key))));
   assert.ok(!JSON.stringify(payload).includes('player_uuid'));
+});
+
+
+test('performance history excludes old and future-dated entries even with shared Redis storage',async()=>{
+  const now=Date.now();
+  lists.set(keys.history,[
+    JSON.stringify({at:new Date(now+600000).toISOString(),tps:4}),
+    JSON.stringify({at:new Date(now-25*60*60*1000).toISOString(),tps:6}),
+    JSON.stringify({at:new Date(now-15*60*1000).toISOString(),tps:19.7,mspt:20,players:2,secret:'discarded'})
+  ]);
+  const response=await historyRoute(auth());
+  assert.equal(response.status,200);
+  const body=await response.json();
+  assert.equal(body.points.length,1);
+  assert.equal(body.points[0].tps,19.7);
+  assert.equal(JSON.stringify(body).includes('discarded'),false);
 });
 
 process.on('exit',()=>{globalThis.fetch=original});
