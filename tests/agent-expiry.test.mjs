@@ -12,7 +12,7 @@ const previous={
 };
 process.env.AGENT_SECRET='a'.repeat(64);
 process.env.UPSTASH_REDIS_REST_URL='https://fake-upstash.example';
-process.env.UPSTASH_REDIS_REST_TOKEN='test-only';
+process.env.UPSTASH_REDIS_REST_TOKEN='local-test-token-only';
 const id='00000000-0000-4000-8000-000000000099';
 const originalFetch=globalThis.fetch;
 let savedRecord=null;
