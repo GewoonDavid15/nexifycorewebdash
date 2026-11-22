@@ -114,7 +114,7 @@ test('valid invitation and proven TOTP activate an account atomically',async()=>
   assert.ok(a.totp_ciphertext.startsWith('v1.'));
   assert.equal(JSON.stringify([...fixture.mem.db.values()]).includes(pass),false);
   assert.equal(JSON.stringify([...fixture.mem.db.values()]).includes(secret),false);
-  assert.equal(await activate(fixture),null?.activated??false);
+  assert.equal((await activate(fixture)).activated,false);
 });
 
 test('wrong MFA, weak password or expired invitation cannot activate account',async()=>{
