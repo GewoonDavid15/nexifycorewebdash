@@ -82,3 +82,13 @@ Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit reques
 - The UI has a fifth tab **Systeemcontrole**. It shows readiness, signed-session expiry and a logout button for the current device.
 - It is still a **single-admin dashboard**. Do NOT claim multi-account RBAC or global session revocation is implemented. See `docs/SECURITY_READINESS.md` and GitHub Issue #3.
 - Do not change owner credentials or login cookie format without a staging-tested migration and rollback. Any new roles must be enforced server-side on every route.
+
+
+## RBAC groundwork — staged, not live (November 2026)
+- The current single-owner password+TOTP login stays untouched.
+- `lib/rbac.js` defines viewer/operator/administrator/owner permissions and a default-deny list. Unsupported console, install, restore, power, file-write or secret-export actions remain denied even for owner.
+- `lib/account-model.js` defines username validation, invitation records, safe public representations and session-version changes on suspension or role edits. It does NOT persist new users or activate invitations.
+- `lib/account-sessions.js` prepares isolated revocable future login sessions, with SHA256-hashed random tokens in existing Redis, six-hour TTL, 2FA checks and fresh server-side account version/role checks.
+- `app/api/system/roles/route.js` and the Systeemcontrole role cards are **read-only previews**, requiring the existing admin session. `enabled:false` means no new web accounts can sign in.
+- Do not wire role sessions to production routes or change the owner's current credentials without a full staging migration, per-route auth tests, account/2FA enrollment and verified rollback. Read `docs/RBAC_FOUNDATION.md` and GitHub Issue #3.
+- Last RBAC foundation verification: **59 automated tests passed**; this does not prove multiuser login is live.
