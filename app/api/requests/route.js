@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {requestAuthorized,trustedOrigin,json} from '../../../lib/security.js';
 import {redis,keys} from '../../../lib/redis.js';
 import {prunePending} from '../../../lib/queue.js';
+import {writeAudit} from '../../../lib/audit.js';
 export const runtime='nodejs';
 export async function GET(req){
   if(!requestAuthorized(req))return json({error:'Unauthorized'},401);
@@ -28,6 +29,8 @@ export async function POST(req){
     await redis('SET',keys.request(id),JSON.stringify(record),'EX',2592000);
     await redis('LPUSH',keys.pending,id);
     await redis('LPUSH',keys.recent,id);await redis('LTRIM',keys.recent,0,49);
+    try{await writeAudit({action:record.action,state:'queued',source:'dashboard',request_id:id});}
+    catch{/* Audit storage is best-effort; the request itself succeeded. */}
     return json({ok:true,request:record},201);
   }catch{return json({error:'Storage unavailable'},503);}
 }
