@@ -295,11 +295,14 @@ export default function Dashboard({initialAuthorized}){
                     <Field name="MC-Node Client API" value={panelOnline?'Bereikbaar':mcnode?.code||'Niet live bevestigd'}/>
                     <Field name="NexifyStaff-versie" value={live?game.plugin_version:'Onbekend'}/>
                     <Field name="Laatste controle" value={dt(readiness.generated_at)}/>
+                    <Field name="Sessie verloopt" value={dt(readiness.session?.expires_at)}/>
                   </Section>
                   <Section title="Beheerbeveiliging" subtitle="Wat je moet weten voordat je extra accounts of beheertaken toevoegt.">
                     <p className="muted">Je huidige dashboard gebruikt één beheerderslogin met wachtwoord en 2FA. Er is nog geen volwaardig multi-account/RBAC-systeem.</p>
                     <div className="panel-note"><Icon name="shield" size={16}/> De eerder gedeelde API-sleutels moeten buiten de chat worden vervangen. Behoud toegangsbeperking op Vercel.</div>
                     <div className="panel-note"><Icon name="alert" size={16}/> De configuratiecontrole bewijst niet dat de Minecraft-JAR of back-ups op MC-Node goed werken.</div>
+                    <div className="panel-note"><Icon name="clock" size={16}/> Je sessie verloopt automatisch na zes uur. Uitloggen verwijdert je sessiecookie uit deze browser.</div>
+                    <button className="btn btn-quiet" onClick={logout} style={{marginTop:15}}>Uitloggen op dit apparaat</button>
                   </Section>
                 </div>
               </>}
