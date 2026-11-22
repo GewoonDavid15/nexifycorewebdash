@@ -14,6 +14,16 @@ export async function POST(req){
     safe.nexify_security=incoming.nexify_security===true;
     safe.nexify_crossplay=incoming.nexify_crossplay===true;
     await redis('SET',keys.status,JSON.stringify(safe),'EX',150);
+    // Store at most one anonymous performance point every 5 minutes.
+    // History is optional and capped at 288 records (approximately 24h).
+    try{
+      const sample=await redis('SET',keys.historyGate,'1','EX',300,'NX');
+      if(sample==='OK'){
+        const point={at:safe.received_at,tps:safe.tps,mspt:safe.mspt,players:safe.players};
+        await redis('LPUSH',keys.history,JSON.stringify(point));
+        await redis('LTRIM',keys.history,0,287);
+      }
+    }catch{/* History outage must never break the live heartbeat. */}
     const ids=await redis('LRANGE',keys.pending,0,4);
     for(const id of ids||[]){
       const raw=await redis('GET',keys.request(id));if(!raw)continue;
