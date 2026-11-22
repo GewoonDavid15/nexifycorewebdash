@@ -16,6 +16,16 @@ jobs:
   verify-dashboard:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 8
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -27,6 +37,10 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Unit and integration tests
         run: npm test
+      - name: Install isolated Redis test client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq redis-tools
+      - name: Real Redis Lua integration tests (localhost only)
+        run: node scripts/verify-request-lua.mjs
       - name: Production build
         run: npm run build
       - name: Check for accidental credentials
