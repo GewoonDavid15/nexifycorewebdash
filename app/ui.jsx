@@ -45,7 +45,7 @@ function Chart({history}){if(!history?.length)return <div className="chart-empty
 export default function Dashboard({initialAuthorized}){
   const [authorized,setAuthorized]=useState(initialAuthorized),[password,setPassword]=useState(''),[code,setCode]=useState('');
   const [tab,setTab]=useState('overview'),[error,setError]=useState(''),[loading,setLoading]=useState(false);
-  const [status,setStatus]=useState(null),[requests,setRequests]=useState([]),[mcnode,setMcnode]=useState(null);
+  const [status,setStatus]=useState(null),[requests,setRequests]=useState([]),[mcnode,setMcnode]=useState(null),[audit,setAudit]=useState([]);
   const [refreshing,setRefreshing]=useState(false),[lastRefresh,setLastRefresh]=useState(null),[busy,setBusy]=useState(false);
   const [confirmBackup,setConfirmBackup]=useState(false),[pluginQuery,setPluginQuery]=useState(''),[history,setHistory]=useState([]);
   const [notice,setNotice]=useState(''),[hostError,setHostError]=useState(''),[cloudError,setCloudError]=useState('');
@@ -53,15 +53,16 @@ export default function Dashboard({initialAuthorized}){
     if(!authorized)return;
     setRefreshing(true);
     try{
-      const [s,r,n,h]=await Promise.allSettled([
+      const [s,r,n,h,a]=await Promise.allSettled([
         fetch('/api/status',{cache:'no-store'}),
         fetch('/api/requests',{cache:'no-store'}),
         fetch('/api/mcnode/overview',{cache:'no-store'}),
-        fetch('/api/history',{cache:'no-store'})
+        fetch('/api/history',{cache:'no-store'}),
+        fetch('/api/audit',{cache:'no-store'})
       ]);
-      const responses=[s,r,n,h].filter(x=>x.status==='fulfilled').map(x=>x.value);
+      const responses=[s,r,n,h,a].filter(x=>x.status==='fulfilled').map(x=>x.value);
       if(responses.some(x=>x.status===401)){
-        setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);return;
+        setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setAudit([]);return;
       }
       if(s.status==='fulfilled'&&s.value.ok){
         const data=await s.value.json();setStatus(data);setCloudError('');
@@ -71,6 +72,9 @@ export default function Dashboard({initialAuthorized}){
       }else setCloudError('De Cloud Bridge-opslag is momenteel niet bereikbaar.');
       if(r.status==='fulfilled'&&r.value.ok){
         const data=await r.value.json();setRequests(Array.isArray(data?.requests)?data.requests:[]);
+      }
+      if(a.status==='fulfilled'&&a.value.ok){
+        const data=await a.value.json();setAudit(Array.isArray(data?.events)?data.events:[]);
       }
       if(h.status==='fulfilled'&&h.value.ok){
         const data=await h.value.json();
@@ -99,7 +103,7 @@ export default function Dashboard({initialAuthorized}){
     }catch(err){setError(err.message)}finally{setLoading(false)}
   }
   async function logout(){
-    try{await fetch('/api/auth/logout',{method:'POST'})}finally{setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setHistory([]);setTab('overview')}
+    try{await fetch('/api/auth/logout',{method:'POST'})}finally{setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setAudit([]);setHistory([]);setTab('overview')}
   }
   async function requestBackup(){
     setBusy(true);setConfirmBackup(false);setNotice('');setError('');
@@ -232,13 +236,18 @@ export default function Dashboard({initialAuthorized}){
               <Section title="Hostingback-ups" subtitle="Alleen metadata, geen herstel of verwijdering."><div className="panel-note"><Icon name="shield" size={16}/> Back-ups op dezelfde hosting zijn niet altijd veilig bij herinstallatie. Gebruik ook externe opslag.</div>{mcnode?.backupStatus!=='available'?<p className="muted">Hostingback-ups: {permissionLabel(mcnode?.backupStatus)}.</p>:mcnode?.backups?.length?<div className="record-list">{mcnode.backups.map((b,i)=><div className="record" key={i}><span className="record-icon"><Icon name="archive" size={18}/></span><div className="record-copy"><strong>{b.name}</strong><small>{dt(b.createdAt)} · {bytes(b.size)}</small></div><Status good={b.successful===true} muted={b.successful===null}>{b.successful===true?'Voltooid':b.successful===false?'Niet gelukt':'Bezig'}</Status></div>)}</div>:<p className="muted">Geen hostingback-ups gevonden.</p>}</Section>
               <Section title="Geplande taken" subtitle="Planning zoals opgeslagen in MC-Node.">{mcnode?.scheduleStatus!=='available'?<p className="muted">Planning: {permissionLabel(mcnode?.scheduleStatus)}.</p>:mcnode?.schedules?.length?<div className="record-list">{mcnode.schedules.map((s,i)=><div className="record" key={i}><span className="record-icon"><Icon name="clock" size={18}/></span><div className="record-copy"><strong>{s.name}</strong><small>Volgende: {dt(s.nextRunAt)}</small></div><Status good={s.active} muted={!s.active}>{s.active?'Actief':'Inactief'}</Status></div>)}</div>:<p className="muted">Er zijn geen geplande taken gevonden.</p>}</Section>
             </div>
-            <Section title="Cloud Bridge-aanvragen" subtitle="Aanvragen via dit dashboard; de echte serverconsole beslist over uitvoering.">{requests.length?<div className="record-list">{requests.map(x=><div className="record" key={x.id}><span className="record-icon"><Icon name="archive" size={18}/></span><div className="record-copy"><strong>{x.action==='diagnostics.capture'?'Diagnoseaanvraag':'Back-upaanvraag'}</strong><small>{dt(x.created_at)}</small></div><span className="small-pill">{x.state==='pending'?'Wacht op server':x.state==='awaiting_console'?'Console-goedkeuring #'+x.local_id:x.state||'Onbekend'}</span></div>)}</div>:<p className="muted">Nog geen aanvragen via het dashboard.</p>}<div className="panel-note"><Icon name="alert" size={16}/> Bij console-goedkeuring gebruik je <code>ncontrol approve &lt;nummer&gt;</code>.</div></Section>
+            <Section title="Cloud Bridge-aanvragen" subtitle="Aanvragen via dit dashboard; de echte serverconsole beslist over uitvoering.">{requests.length?<div className="record-list">{requests.map(x=><div className="record" key={x.id}><span className="record-icon"><Icon name="archive" size={18}/></span><div className="record-copy"><strong>{x.action==='diagnostics.capture'?'Diagnoseaanvraag':'Back-upaanvraag'}</strong><small>{dt(x.created_at)}</small></div><span className="small-pill">{x.state==='pending'?'Wacht op server':x.state==='awaiting_console'?'Console-goedkeuring #'+x.local_id:x.state==='expired'?'Verlopen':x.state==='completed'?'Voltooid':x.state||'Onbekend'}</span></div>)}</div>:<p className="muted">Nog geen aanvragen via het dashboard.</p>}<div className="panel-note"><Icon name="alert" size={16}/> Bij console-goedkeuring gebruik je <code>ncontrol approve &lt;nummer&gt;</code>.</div></Section>
           </>}
           {tab==='activity'&&<>
             <div className="section-intro"><div><h2>Activiteit & controles</h2><p>Inzichten in de hostingactiviteit en betrouwbaarheid van de koppelingen.</p></div><button className="btn btn-secondary" onClick={copyDiagnostics}><Icon name="copy" size={16}/> Kopieer diagnose</button></div>
             <Section title="Minecraft-diagnose op aanvraag" subtitle="Lees prestatie- en modulediagnostiek uit NexifyStaff 2.3 of nieuwer. Er worden geen spelersidentiteiten of serverbestanden verstuurd.">
               <div className="action-tile"><div className="action-icon"><Icon name="chart"/></div><div><h3>Veilige diagnostiek</h3><p>{supportsDiagnostics?'De nieuwe agent ondersteunt dit rapport.':live?'Installeer eerst NexifyStaff 2.3.0.':'Wacht op een actuele Cloud Bridge-synchronisatie.'}</p></div><button className="btn btn-secondary" disabled={!supportsDiagnostics||busy||pendingDiagnostic} onClick={requestDiagnostics}>{pendingDiagnostic?'In behandeling':busy?'Bezig…':'Diagnose aanvragen'}</button></div>
               {lastDiagnostic?<div className="diagnostic-fields"><Field name="Rapport gemaakt" value={dt(lastDiagnostic.completed_at)}/><Field name="Agentversie" value={lastDiagnostic.report.plugin_version||'—'}/><Field name="TPS" value={num(lastDiagnostic.report.tps,2)}/><Field name="MSPT" value={num(lastDiagnostic.report.mspt,1)+' ms'}/><Field name="Java-versie" value={num(lastDiagnostic.report.java_major)}/><Field name="Plugin-uptime" value={uptime(lastDiagnostic.report.uptime_seconds*1000)}/><Field name="NexifySecurity" value={lastDiagnostic.report.nexify_security?'Actief':'Niet actief'}/><Field name="NexifyCrossplay" value={lastDiagnostic.report.nexify_crossplay?'Actief':'Niet actief'}/></div>:<p className="muted">Nog geen voltooid diagnoserapport ontvangen.</p>}
+            </Section>
+            <Section title="Beheeractiviteiten" subtitle="Aanvragen en resultaten. Geen IP-adressen, wachtwoorden of spelersgegevens.">
+              {audit.length?<div className="record-list">{audit.slice(0,25).map((item,i)=><div className="record" key={item.request_id+item.state+i}><span className="record-icon"><Icon name="list" size={18}/></span><div className="record-copy"><strong>{item.action==='backup.now'?'Back-up':'Diagnose'} · {item.state==='queued'?'Aangevraagd':item.state==='awaiting_console'?'Wacht op console':item.state==='completed'?'Afgerond':item.state==='expired'?'Verlopen':item.state==='rejected'?'Afgewezen':item.state}</strong><small>{dt(item.at)} · {item.source==='dashboard'?'Dashboard':'Minecraft-agent'}</small></div></div>)}</div>:
+                <p className="muted">Er zijn nog geen beheeractiviteiten vastgelegd. Nieuwe aanvragen worden hier getoond.</p>}
+              <p className="hint">Dit is een beperkt operationeel logboek, geen onveranderbaar juridisch auditregister. Bewaartermijn maximaal 30 dagen.</p>
             </Section>
             <div className="two-column">
               <Section title="Recente hostingactiviteit" subtitle="Gebeurtenistypen zonder gevoelige metadata.">{mcnode?.activityStatus!=='available'?<p className="muted">Activiteitslog: {permissionLabel(mcnode?.activityStatus)}.</p>:mcnode?.activity?.length?<div className="record-list">{mcnode.activity.map((a,i)=><div className="record" key={i}><span className="record-icon"><Icon name="list" size={18}/></span><div className="record-copy"><strong>{a.event}</strong><small>{dt(a.createdAt)}</small></div></div>)}</div>:<p className="muted">Nog geen hostingactiviteit gevonden.</p>}</Section>
