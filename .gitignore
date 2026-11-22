@@ -1,0 +1,24 @@
+# Dependencies / build output
+node_modules/
+.next/
+out/
+.vercel/
+dist/
+coverage/
+
+# Environment credentials and API keys
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.keystore
+
+# Local editor files
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-error.log*
