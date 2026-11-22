@@ -74,7 +74,7 @@ test('MC-Node overview tolerates missing files permission',async()=>{
   try{
     const info=await mcnodeOverview(valid);
     assert.equal(info.connected,true);
-    assert.equal(info.pluginStatus,'unavailable');
+    assert.equal(info.pluginStatus,'forbidden');
     assert.deepEqual(info.plugins,[]);
   }finally{globalThis.fetch=before;}
 });
@@ -103,7 +103,7 @@ test('MC-Node API safely reports not configured, without requiring a connection'
     const session=makeSession();
     const r=await overviewRoute({cookies:{get:key=>key===COOKIE?{value:session}:undefined}});
     assert.equal(r.status,200);
-    assert.deepEqual(await r.json(),{configured:false,connected:false});
+    assert.deepEqual(await r.json(),{configured:false,connected:false,code:'not_configured'});
   }finally{
     for(const k of keys){if(prev[k]===undefined)delete process.env[k];else process.env[k]=prev[k];}
   }
