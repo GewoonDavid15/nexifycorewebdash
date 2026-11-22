@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState,useCallback,useMemo} from 'react';
+import {analyzeHealth} from '../lib/health.js';
 
 const TABS=[{id:'overview',label:'Overzicht',icon:'◫'},{id:'hosting',label:'MC-Node hosting',icon:'▣'},{id:'backups',label:'Back-ups & taken',icon:'▤'},{id:'activity',label:'Activiteit',icon:'◷'}];
 const num=(v,places=0)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('nl-NL',{maximumFractionDigits:places,minimumFractionDigits:places}):'—';
@@ -40,7 +41,7 @@ function Field({name,value,alert=false}){return <div className="detail-row"><spa
 function Bar({value,label}){return <div className="usage"><div className="usage-caption"><span>{label}</span><strong>{typeof value==='number'?num(value,1)+'%':'—'}</strong></div><div className="usage-track"><span className={typeof value==='number'&&value>=90?'critical':typeof value==='number'&&value>=75?'warning':''} style={{width:typeof value==='number'?Math.max(0,Math.min(100,value))+'%':'0%'}}/></div></div>}
 function Chart({history}){if(!history?.length)return <div className="chart-empty">De grafiek verschijnt zodra nieuwe echte metingen binnenkomen.</div>;
   const points=history.map((h,i)=>{const x=history.length===1?0:i*100/(history.length-1);const y=100-Math.max(0,Math.min(20,h.tps??0))*5;return x+','+y;}).join(' ');
-  return <div className="chart-wrap"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="TPS tijdens deze dashboardsessie"><path d="M0 25H100M0 50H100M0 75H100" stroke="currentColor" strokeOpacity=".12" strokeWidth=".6"/><polyline points={points} fill="none" stroke="#6ea6ff" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"/></svg><div className="chart-axis"><span>Start sessie</span><span>{history.length} metingen</span><span>Nu</span></div></div>}
+  return <div className="chart-wrap"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="TPS tijdens deze dashboardsessie"><path d="M0 25H100M0 50H100M0 75H100" stroke="currentColor" strokeOpacity=".12" strokeWidth=".6"/><polyline points={points} fill="none" stroke="#6ea6ff" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"/></svg><div className="chart-axis"><span>Oudste meting</span><span>{history.length} metingen</span><span>Nu</span></div></div>}
 export default function Dashboard({initialAuthorized}){
   const [authorized,setAuthorized]=useState(initialAuthorized),[password,setPassword]=useState(''),[code,setCode]=useState('');
   const [tab,setTab]=useState('overview'),[error,setError]=useState(''),[loading,setLoading]=useState(false);
@@ -52,12 +53,13 @@ export default function Dashboard({initialAuthorized}){
     if(!authorized)return;
     setRefreshing(true);
     try{
-      const [s,r,n]=await Promise.allSettled([
+      const [s,r,n,h]=await Promise.allSettled([
         fetch('/api/status',{cache:'no-store'}),
         fetch('/api/requests',{cache:'no-store'}),
-        fetch('/api/mcnode/overview',{cache:'no-store'})
+        fetch('/api/mcnode/overview',{cache:'no-store'}),
+        fetch('/api/history',{cache:'no-store'})
       ]);
-      const responses=[s,r,n].filter(x=>x.status==='fulfilled').map(x=>x.value);
+      const responses=[s,r,n,h].filter(x=>x.status==='fulfilled').map(x=>x.value);
       if(responses.some(x=>x.status===401)){
         setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);return;
       }
@@ -69,6 +71,10 @@ export default function Dashboard({initialAuthorized}){
       }else setCloudError('De Cloud Bridge-opslag is momenteel niet bereikbaar.');
       if(r.status==='fulfilled'&&r.value.ok){
         const data=await r.value.json();setRequests(Array.isArray(data?.requests)?data.requests:[]);
+      }
+      if(h.status==='fulfilled'&&h.value.ok){
+        const data=await h.value.json();
+        if(Array.isArray(data.points)&&data.points.length)setHistory(data.points.slice(-288));
       }
       if(n.status==='fulfilled'){
         const data=await n.value.json().catch(()=>({configured:true,connected:false,code:'invalid_panel_response'}));
@@ -154,6 +160,7 @@ export default function Dashboard({initialAuthorized}){
   const filteredPlugins=useMemo(()=>((mcnode?.plugins||[]).filter(x=>x?.name?.toLowerCase().includes(pluginQuery.trim().toLowerCase()))),[mcnode?.plugins,pluginQuery]);
   const health=live?((game.tps??20)<17?'Prestatie controleren':(game.mspt??0)>45?'Hoge tickbelasting':'Normale prestaties'):'Geen recente spelgegevens';
   const panelReady=mcnode?.configured===true;
+  const healthAlerts=useMemo(()=>analyzeHealth(status,mcnode),[status,mcnode]);
   const onlineCount=game.players;
   const warnCount=[cloudError,hostError,!(panelReady),!(live)].filter(Boolean).length;
   return <div className="app-root">
@@ -194,8 +201,12 @@ export default function Dashboard({initialAuthorized}){
               <Metric icon="clock" label="Plugin-uptime" value={live?uptime(game.uptime_seconds*1000):null} description="Tijd sinds NexifyStaff start"/>
               <Metric icon="users" label="Spelerslimiet" value={live?num(game.max_players):null} description="Maximale capaciteit"/>
             </div>
+            <Section title="Gezondheid & aandachtspunten" subtitle="Automatische, uitlegbare waarschuwingen zonder zelfstandig ingrijpen.">
+              {healthAlerts.length?<div className="alert-list">{healthAlerts.map((item,i)=><div className="health-alert" key={i}><Icon name="alert" size={18}/><div><strong>{item.title}</strong><p>{item.detail}</p></div></div>)}</div>:
+                <p className="muted">Geen prestatieafwijkingen gevonden in de beschikbare metingen. Dit is geen volledige serverveiligheidscontrole.</p>}
+            </Section>
             <div className="two-column">
-              <Section title="Serverprestaties" subtitle="TPS-trend gedurende deze dashboardsessie."><Chart history={history}/><div className="panel-note"><Icon name="clock" size={16}/> Laatste Minecraft-synchronisatie: {live?dt(game.received_at):'geen recente gegevens'}</div></Section>
+              <Section title="Serverprestaties" subtitle="Anonieme TPS-metingen met maximaal 24 uur geschiedenis."><Chart history={history}/><div className="panel-note"><Icon name="clock" size={16}/> Laatste Minecraft-synchronisatie: {live?dt(game.received_at):'geen recente gegevens'}</div></Section>
               <Section title="Integraties" subtitle="Beschikbaarheid van onderdelen in je huidige opstelling."><Field name="NexifyStaff" value={live?game.plugin_version:'—'}/><Field name="NexifySecurity" value={!live?'Niet gecontroleerd':game.nexify_security?'Actief':'Niet gedetecteerd'}/><Field name="NexifyCrossplay" value={!live?'Niet gecontroleerd':game.nexify_crossplay?'Actief':'Niet gedetecteerd'}/><Field name="Geyser / Bedrock" value={!live?'Niet gecontroleerd':game.geyser?'Gedetecteerd':'Niet gedetecteerd'}/><Field name="Floodgate" value={!live?'Niet gecontroleerd':game.floodgate?'Gedetecteerd':'Niet gedetecteerd'}/><Field name="Hostingstatus" value={panelOnline?labelForState(panelState):'Niet beschikbaar'}/><div className="panel-note"><Icon name="shield" size={16}/> Geen spelersnamen of wereldbestanden in de Cloud Bridge.</div></Section>
             </div>
             <Section title="Snelle acties" subtitle="Alle acties blijven beperkt en vereisen waar nodig goedkeuring in de Minecraft-console."><div className="action-grid"><div className="action-tile"><div className="action-icon"><Icon name="archive"/></div><div><h3>Back-up aanvragen</h3><p>Maak een aanvraag aan. Uitvoeren gebeurt pas na console-goedkeuring.</p></div><button className="btn btn-secondary" onClick={()=>setConfirmBackup(true)} disabled={!live||busy}>Aanvragen</button></div><div className="action-tile"><div className="action-icon"><Icon name="server"/></div><div><h3>Hosting bekijken</h3><p>Bekijk MC-Node-prestaties en je huidige plugins.</p></div><button className="btn btn-secondary" onClick={()=>setTab('hosting')}>Bekijken</button></div><div className="action-tile"><div className="action-icon"><Icon name="chart"/></div><div><h3>Serverdiagnose</h3><p>Vraag een veilig rapport op vanaf NexifyStaff 2.3.0.</p></div><button className="btn btn-secondary" onClick={requestDiagnostics} disabled={!supportsDiagnostics||busy}>Aanvragen</button></div></div></Section>
