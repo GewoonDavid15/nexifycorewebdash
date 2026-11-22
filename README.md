@@ -59,3 +59,25 @@ De server synchroniseert standaard elke 30 seconden. Na 2 minuten zonder nieuwe 
 Nexify heeft **geen tweede database** nodig. De code gebruikt rechtstreeks `KV_REST_API_URL` en `KV_REST_API_TOKEN` die Vercel bij een bestaande Upstash/KV-integratie beschikbaar maakt. Als deze ontbreken, werken de bestaande handmatige `UPSTASH_REDIS_REST_URL` en `UPSTASH_REDIS_REST_TOKEN` ook. Nexify slaat gegevens op met het voorvoegsel `nexify:cloud:main:v1:` zodat de keys van andere projecten niet worden overschreven. Wel deelt de app de gebruikslimieten van dezelfde database.
 
 De code hoort in GitHub; databasegeheimen blijven uitsluitend in Vercel Environment Variables. Na een nieuwe deployment moet de MC-Node Cloud Bridge dezelfde agent-secret gebruiken als de server-side Vercel-configuratie. De broncode is een prototype; houd de Minecraft-server eerst beschermd en maak back-ups.
+
+## MC-Node-paneel (optionele alleen-lezen koppeling)
+
+Dit project bevat een nieuwe `/api/mcnode/overview`-route om het Pterodactyl-clientpaneel uit te lezen. De route is alleen toegankelijk na dashboardlogin (wachtwoord + 2FA). De MC-Node-api-key gaat nooit naar de browser en wordt niet in Redis opgeslagen.
+
+Maak **geen tweede Redis-database**, deze koppeling gebruikt gewoon de bestaande dashboardconfiguratie.
+
+Zet via **Vercel → nexifycorewebdash → Settings → Environment Variables** de volgende **drie beveiligde productievariabelen**. Voeg de echte sleutel uitsluitend in de Vercel-interface toe, nooit in GitHub, een chat of een broncodebestand:
+
+| Naam | Wat erin moet |
+| --- | --- |
+| `MCNODE_PANEL_URL` | Het eigenlijke HTTPS-adres van je MC-Node-gamepaneel, zonder extra pad (bijv. `https://panel.voorbeeld.nl`) |
+| `MCNODE_CLIENT_API_KEY` | Een nieuwe **Pterodactyl Client API**-sleutel (begint met `ptlc_`). Gebruik geen Application/Admin API-key |
+| `MCNODE_SERVER_ID` | De Pterodactyl-serveridentifier van de gewenste server (bijv. `abcd1234`), **niet** het IP-adres of poortnummer |
+
+De sleutel maak je aan binnen MC-Node → gamepaneel → accountprofiel → API Credentials. Indien mogelijk gebruik je een speciaal account met alleen de benodigde serverrechten. Gebruik in Vercel het type **Encrypted/Sensitive** en target **Production**. Voer daarna een nieuwe Vercel-deployment uit.
+
+Dit overzicht toont de servernaam, aan/uit-status, CPU-, RAM- en schijfgebruik, uptime en beschikbare plugin-JAR-bestandsnamen. De pluginlijst kan ontbreken als de sleutel geen toegang tot bestanden heeft. De server-, resource- en file-list-aanroepen zijn allemaal **GET** (alleen lezen).
+
+**Deze website geeft ChatGPT niet automatisch toegang tot het MC-Node-paneel.** Voor acties op verzoek vanuit een chat is daarnaast een ondersteunde, door jou gekoppelde tool/connector of een browser-workflow met jouw toestemming nodig. Voeg geen openbare write-endpoints, remote shell of onbeperkte console-opdrachten toe. Acties als server herstarten en bestanden aanpassen vragen afzonderlijke autorisatie en controles.
+
+Er is **geen nieuwe Minecraft-JAR nodig** voor het Pterodactyl-overzicht: deze leest de MC-Node Client API rechtstreeks vanuit Vercel. De bestaande Cloud Bridge blijft apart verantwoordelijk voor Minecraft-prestaties en back-upaanvragen. Het overzicht is voorlopig experimenteel en niet met een echte MC-Node-account getest.
