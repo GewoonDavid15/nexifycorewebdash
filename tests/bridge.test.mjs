@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {makeSession,COOKIE} from '../lib/security.js';
 import {POST as sync} from '../app/api/agent/sync/route.js';
 import {POST as ack} from '../app/api/agent/ack/route.js';
+import {POST as reportDiagnostics} from '../app/api/agent/report/route.js';
 import {GET as status} from '../app/api/status/route.js';
 import {GET as list,POST as create} from '../app/api/requests/route.js';
 
@@ -63,4 +64,40 @@ test('arbitrary browser commands are rejected',async()=>{
   const user=auth();Object.assign(user,{url:origin+'/api/requests',headers:new Headers({origin}),text:async()=>JSON.stringify({action:'console.exec',value:'stop'})});
   const r=await create(user);assert.equal(r.status,400);
 });
+test('diagnostics request is read-only, idempotent and strips sensitive fields',async()=>{
+  const user=auth();
+  Object.assign(user,{url:origin+'/api/requests',headers:new Headers({origin}),text:async()=>JSON.stringify({action:'diagnostics.capture'})});
+  const created=await create(user);
+  assert.equal(created.status,201);
+  const {request:ticket}=await created.json();
+  assert.equal(ticket.action,'diagnostics.capture');
+  const duplicate=await create(user);assert.equal(duplicate.status,429);
+  const authHeader={'Authorization':'Bearer '+process.env.AGENT_SECRET};
+  const queued=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.3.0',uptime_seconds:42,max_players:30},authHeader));
+  const job=(await queued.json()).request;
+  assert.equal(job.action,'diagnostics.capture');assert.equal(job.id,ticket.id);
+  const payload={id:ticket.id,report:{tps:19.5,mspt:24,players:3,max_players:30,uptime_seconds:42,nexify_security:true,plugin_version:'2.3.0',player_uuid:'PRIVATE',console:'PRIVATE',server_ip:'PRIVATE',world_path:'PRIVATE'}};
+  const denied=await reportDiagnostics(request('/api/agent/report','POST',payload));
+  assert.equal(denied.status,401);
+  const accepted=await reportDiagnostics(request('/api/agent/report','POST',payload,authHeader));
+  assert.equal(accepted.status,200);
+  const again=await reportDiagnostics(request('/api/agent/report','POST',payload,authHeader));
+  assert.equal(again.status,200);assert.equal((await again.json()).already_completed,true);
+  const listResponse=await list(auth());
+  const completed=(await listResponse.json()).requests.find(x=>x.id===ticket.id);
+  assert.equal(completed.state,'completed');
+  assert.equal(completed.report.tps,19.5);
+  assert.equal(completed.report.nexify_security,true);
+  for(const prohibited of ['PRIVATE','player_uuid','server_ip','world_path','console'])assert.ok(!JSON.stringify(completed).includes(prohibited));
+  const noOtherJobs=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.3.0'},authHeader));
+  assert.equal((await noOtherJobs.json()).request,null);
+});
+test('diagnostic reports reject unknown IDs and inappropriate content',async()=>{
+  const authHeader={'Authorization':'Bearer '+process.env.AGENT_SECRET};
+  let r=await reportDiagnostics(request('/api/agent/report','POST',{id:'bad-id',report:{tps:20}},authHeader));
+  assert.equal(r.status,400);
+  r=await reportDiagnostics(request('/api/agent/report','POST',{id:'f8b040d3-8d90-42b6-b9e0-9d134147f6f5',report:{password:'PRIVATE'}},authHeader));
+  assert.equal(r.status,400);
+});
+
 process.on('exit',()=>{globalThis.fetch=original});
