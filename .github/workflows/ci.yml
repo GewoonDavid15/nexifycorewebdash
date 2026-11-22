@@ -16,6 +16,16 @@ jobs:
   verify-dashboard:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -27,6 +37,14 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Unit and integration tests
         run: npm test
+      - name: Verify atomic Redis Lua operations
+        shell: bash
+        run: |
+          if ! command -v redis-cli >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y redis-tools
+          fi
+          node scripts/verify-redis-lua.mjs
       - name: Production build
         run: npm run build
       - name: Check for accidental credentials
