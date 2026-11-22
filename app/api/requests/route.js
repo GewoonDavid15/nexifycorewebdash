@@ -1,10 +1,12 @@
 import {randomUUID} from 'node:crypto';
 import {requestAuthorized,trustedOrigin,json} from '../../../lib/security.js';
 import {redis,keys} from '../../../lib/redis.js';
+import {prunePending} from '../../../lib/queue.js';
 export const runtime='nodejs';
 export async function GET(req){
   if(!requestAuthorized(req))return json({error:'Unauthorized'},401);
   try{
+    await prunePending();
     const ids=await redis('LRANGE',keys.recent,0,19);const items=[];
     for(const id of ids||[]){const raw=await redis('GET',keys.request(id));if(raw)items.push(JSON.parse(raw));}
     return json({requests:items});
@@ -17,6 +19,7 @@ export async function POST(req){
     const text=await req.text();if(text.length>1000)return json({error:'Too large'},413);
     const body=JSON.parse(text);
     if(!['backup.now','diagnostics.capture'].includes(body.action))return json({error:'Action not allowed'},400);
+    await prunePending();
     if(Number(await redis('LLEN',keys.pending))>=10)return json({error:'Too many pending requests'},429);
     const cooldown=body.action==='backup.now'?keys.backupCooldown:keys.diagnosticsCooldown;
     const allowed=await redis('SET',cooldown,'1','EX',60,'NX');
