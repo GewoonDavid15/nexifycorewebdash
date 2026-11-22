@@ -23,6 +23,7 @@ export async function POST(req){
         const point={at:safe.received_at,tps:safe.tps,mspt:safe.mspt,players:safe.players};
         await redis('LPUSH',keys.history,JSON.stringify(point));
         await redis('LTRIM',keys.history,0,287);
+        await redis('EXPIRE',keys.history,26*60*60);
       }
     }catch{/* History outage must never break the live heartbeat. */}
     const queue=await prunePending();
