@@ -18,6 +18,8 @@ export async function POST(req){
     const body=JSON.parse(text);
     if(body.action!=='backup.now')return json({error:'Action not allowed'},400);
     if(Number(await redis('LLEN',keys.pending))>=10)return json({error:'Too many pending requests'},429);
+    const allowed=await redis('SET',keys.backupCooldown,'1','EX',60,'NX');
+    if(allowed!=='OK')return json({error:'Wacht 60 seconden voordat je opnieuw een back-up aanvraagt'},429);
     const id=randomUUID();const record={id,action:'backup.now',created_at:new Date().toISOString(),state:'pending'};
     await redis('SET',keys.request(id),JSON.stringify(record),'EX',2592000);
     await redis('LPUSH',keys.pending,id);
