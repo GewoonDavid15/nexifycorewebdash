@@ -1,0 +1,39 @@
+name: Nexify Enterprise - test en build
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexify-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Unit and integration tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Check for accidental credentials
+        shell: bash
+        run: |
+          if git grep -n -E 'ptlc_[A-Za-z0-9]{24,}|(sk-[A-Za-z0-9]{35,})' -- ':!*.md' ':!tests/**' ':!scripts/**'; then
+            echo "Potential hardcoded credential detected"
+            exit 1
+          fi
+          echo "No obvious credential patterns found"
