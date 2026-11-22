@@ -69,3 +69,17 @@ De branch bevat `lib/account-vault.js`, maar geen actieve accountenrollment-API.
 - Bewaar de onversleutelde eenmalige enrollmentwaarde niet in Redis, logs, GitHub of chat. Voor de uiteindelijke enrollment-route zijn CSRF, een korte verificatieperiode, TOTP-codecontrole en gebruikersbevestiging nodig.
 
 De module wordt offline getest in `tests/account-vault.test.mjs` met willekeurige, tijdelijke testsleutels. Dit bewijst nog geen volledige 2FA-login voor een echt gebruikersaccount.
+
+
+## Eenmalige uitnodigingstokens
+
+`lib/account-invitations.js` bereidt het uitgeven en eenmalig claimen van accountuitnodigingen voor:
+
+- Elke uitnodiging krijgt een willekeurige 256-bit bearer-token en verloopt uiterlijk na 48 uur.
+- Redis bewaart **alleen de SHA256-hash van het token** als sleutel, nooit de oorspronkelijke tokenwaarde.
+- Een Redis-Lua-transactie koppelt precies één geldige uitnodiging aan een account en verifieert dat de uitvoerende beheerder **op dat moment** nog geautoriseerd is.
+- Een tweede transactie kan een token maar **één keer** claimen. Tokens voor een ander account, verlopen uitnodigingen en geschorste accounts worden geweigerd.
+- Er wordt **nog geen account geactiveerd**: `consumeInvitationToken` claimt alleen de uitnodiging. Voor toekomstige productie-enrollment moeten de tokenclaim, persoonlijke wachtwoordinstelling en MFA-verificatie transactioneel worden samengebracht. Anders zou een mislukte enrollment een geldig token onnodig kunnen opmaken.
+- Er is geen e-mail-, Discord-, website- of ChatGPT-route gemaakt die uitnodigingstokens verstuurt of gebruikt. Een beveiligde online enrollmentflow vereist nog nieuwe, geteste endpoints, rate limits, CSRF-beveiliging en heldere gebruikersbevestiging.
+
+Deze regels zijn met mocks getest in `tests/account-invitations.test.mjs`. Ze bewijzen niet dat de Lua-scripts al op een echte Upstash-database zijn uitgevoerd.
