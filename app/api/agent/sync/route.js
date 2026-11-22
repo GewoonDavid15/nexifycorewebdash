@@ -1,5 +1,6 @@
 import {isAgent,json} from '../../../../lib/security.js';
 import {redis,keys} from '../../../../lib/redis.js';
+import {prunePending} from '../../../../lib/queue.js';
 export const runtime='nodejs';
 export async function POST(req){
   if(!isAgent(req))return json({error:'Unauthorized'},401);
@@ -24,12 +25,10 @@ export async function POST(req){
         await redis('LTRIM',keys.history,0,287);
       }
     }catch{/* History outage must never break the live heartbeat. */}
-    const ids=await redis('LRANGE',keys.pending,0,4);
-    for(const id of ids||[]){
-      const raw=await redis('GET',keys.request(id));if(!raw)continue;
-      const record=JSON.parse(raw);
-      if(record.state==='pending'&&['backup.now','diagnostics.capture'].includes(record.action))
-        return json({ok:true,request:{id,action:record.action}});
+    const queue=await prunePending();
+    if(queue.live.length){
+      const record=queue.live[0];
+      return json({ok:true,request:{id:record.id,action:record.action}});
     }
     return json({ok:true,request:null});
   }catch{return json({error:'Cloud storage temporarily unavailable'},503);}
