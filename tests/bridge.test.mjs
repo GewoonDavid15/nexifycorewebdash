@@ -51,6 +51,7 @@ test('dashboard creates safe request, agent receives and acknowledges it',async(
   const user=auth();Object.assign(user,{url:origin+'/api/requests',headers:new Headers({origin}),text:async()=>JSON.stringify({action:'backup.now'})});
   let r=await create(user);assert.equal(r.status,201);
   const added=(await r.json()).request;
+  const duplicate=await create(user);assert.equal(duplicate.status,429);
   r=await sync(request('/api/agent/sync','POST',{server_id:'main',plugin_version:'2.2.0',tps:20},{'Authorization':'Bearer '+process.env.AGENT_SECRET}));
   assert.equal((await r.json()).request.id,added.id);
   r=await ack(request('/api/agent/ack','POST',{id:added.id,local_id:42},{'Authorization':'Bearer '+process.env.AGENT_SECRET}));assert.equal(r.status,200);
