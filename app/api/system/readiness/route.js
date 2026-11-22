@@ -1,4 +1,4 @@
-import {requestAuthorized,json} from '../../../../lib/security.js';
+import {COOKIE,requestAuthorized,json} from '../../../../lib/security.js';
 import {systemReadiness} from '../../../../lib/readiness.js';
 import {redis} from '../../../../lib/redis.js';
 
@@ -23,8 +23,11 @@ export async function GET(req) {
       redisLive==='unavailable'?'REST-configuratie aanwezig, maar Redis reageert niet. Controleer de bestaande koppeling.':
       x.detail
   }:x);
+  const signedCookie=req.cookies.get(COOKIE).value;
+  const expiresAt=Number(signedCookie.split('.')[1]);
   return json({
     generated_at:new Date().toISOString(),
+    session:{expires_at:new Date(expiresAt).toISOString(),remaining_minutes:Math.max(0,Math.ceil((expiresAt-Date.now())/60000))},
     mode:'read_only',
     checks,
     summary:status.summary,
