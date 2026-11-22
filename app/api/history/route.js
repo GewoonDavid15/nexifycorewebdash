@@ -8,6 +8,9 @@ export async function GET(req) {
   try{
     const rows=await redis('LRANGE',keys.history,0,287);
     const points=[];
+    const now=Date.now();
+    const lower=now-24*60*60*1000;
+    const upper=now+60*1000;
     for(const item of rows||[]){
       try{
         const raw=JSON.parse(item);
