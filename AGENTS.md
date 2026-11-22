@@ -101,3 +101,11 @@ Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit reques
 - Never add new account login, invitations, staff management or privileged write routes until real per-user auth, owner bootstrap, MFA enrollment and role enforcement on every route have staging tests and explicit approval.
 - The old owner's password+TOTP session remains untouched. No account migration or production Redis mutation has been authorized in this branch.
 - Pull requests should run the GitHub Actions test suite. Vercel may be rate-limited; don't claim deployment without a READY result from the exact commit.
+
+
+## Identity enrollment & real Redis CI (draft PR #4)
+- `lib/account-activation.js`: internal, atomic invite+MFA/password enrollment. Never call the old `consumeInvitationToken` as a separate first step before enrollment.
+- `lib/account-login.js`: internal username+scrypt+decrypted per-user TOTP check, per-account Redis TOTP replay key, then revocable hashed-token session. No HTTP routes or active users yet.
+- `scripts/verify-redis-lua.mjs` is a CI-only **localhost** Redis 7 integration test, using ephemeral key prefixes and no production credentials. CI runs it in a temporary Redis service container.
+- Verified at PR stage: **91/91 Node tests**, real Redis Lua account/invite/activate/revoke/replay checks passed, and Next.js build passed. Does not imply Upstash provider staging or MC-Node availability.
+- Do not enable any multiuser login without shared production-grade server-side authorization across routes, CSRF/rate limits, email/invite delivery controls, proper vault key management, and staged owner recovery.
