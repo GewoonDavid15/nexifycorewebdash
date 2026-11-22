@@ -2,6 +2,7 @@ import {isAgent,json} from '../../../../lib/security.js';
 import {redis,keys} from '../../../../lib/redis.js';
 import {sanitizeDiagnostics} from '../../../../lib/diagnostics.js';
 import {writeAudit} from '../../../../lib/audit.js';
+import {isPendingFresh} from '../../../../lib/queue.js';
 
 export const runtime='nodejs';
 
@@ -20,6 +21,7 @@ export async function POST(req) {
     if(record.action!=='diagnostics.capture')return json({error:'Action mismatch'},409);
     if(record.state==='completed')return json({ok:true,already_completed:true});
     if(record.state!=='pending')return json({error:'Invalid request state'},409);
+    if(!isPendingFresh(record))return json({error:'Request expired'},409);
     const updated={...record,state:'completed',completed_at:new Date().toISOString(),report};
     await redis('SET',keys.request(body.id),JSON.stringify(updated),'EX',2592000);
     await redis('LREM',keys.pending,0,body.id);
