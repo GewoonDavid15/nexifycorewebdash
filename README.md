@@ -52,7 +52,7 @@ De server synchroniseert standaard elke 30 seconden. Na 2 minuten zonder nieuwe 
 
 ## Lokaal testen
 
-`npm test` test authenticatie en de API-synchronisatie met een gesimuleerde Redis-server. De uiteindelijke `next build` en Vercel-deployment moeten nog met echte geïnstalleerde Next.js-dependencies worden getest.
+`npm test` test authenticatie en de API-synchronisatie met een gesimuleerde Redis-server. De productiebuild wordt bij elke GitHub-deployment op Vercel getest via `npm run build` (eerst `npm test`, daarna `next build`).
 
 ## Bestaande gratis Redis-database hergebruiken
 
@@ -81,3 +81,26 @@ Dit overzicht toont de servernaam, aan/uit-status, CPU-, RAM- en schijfgebruik, 
 **Deze website geeft ChatGPT niet automatisch toegang tot het MC-Node-paneel.** Voor acties op verzoek vanuit een chat is daarnaast een ondersteunde, door jou gekoppelde tool/connector of een browser-workflow met jouw toestemming nodig. Voeg geen openbare write-endpoints, remote shell of onbeperkte console-opdrachten toe. Acties als server herstarten en bestanden aanpassen vragen afzonderlijke autorisatie en controles.
 
 Er is **geen nieuwe Minecraft-JAR nodig** voor het Pterodactyl-overzicht: deze leest de MC-Node Client API rechtstreeks vanuit Vercel. De bestaande Cloud Bridge blijft apart verantwoordelijk voor Minecraft-prestaties en back-upaanvragen. Het overzicht is voorlopig experimenteel en niet met een echte MC-Node-account getest.
+
+
+## Nexify Enterprise Control Center 0.2 — november 2026
+
+Het dashboard is vernieuwd met vier onderdelen:
+
+- **Overzicht:** TPS, MSPT, spelers, Minecraft-geheugen, ping, chunks, een TPS-grafiek op basis van echte sessiemetingen en status van Cloud Bridge/Geyser/Floodgate.
+- **MC-Node hosting:** resourcegebruik, serverstatus, uptime, RAM- en schijflimieten, pluginlijst en zoekveld. De Client API wordt uitsluitend vanuit de server-side Vercel-functie benaderd.
+- **Back-ups & taken:** bestaande hostingback-ups en schedules alleen-lezen, daarnaast een beperkt Cloud Bridge-back-upverzoek met expliciete bevestiging en console-goedkeuring. Twee back-upverzoeken binnen 60 seconden worden afgewezen met een Redis-cooldown.
+- **Activiteit:** hostinggebeurtenissen zonder gevoelige metadata, status van optionele API-rechten, en een knop om een **veilige diagnose zonder secrets** te kopiëren.
+
+**Teststatus bij deze update:** 22 geautomatiseerde tests geslaagd en Next.js-productiebuild op Vercel READY. Dat bevestigt het bouwen en de mocks, niet dat Minecraft momenteel een live heartbeat verstuurt of MC-Node werkelijk bereikbaar is. Test dit vanuit het ingelogde dashboard.
+
+### Beveiligings- en onderhoudsverbeteringen
+
+- Next.js **16.4.6** en React / React DOM **19.2.9** vastgezet; deze versies bevatten actuele beveiligingsupdates.
+- Extra browserheaders voor framebescherming, no-sniff, HSTS en basis-CSP.
+- Dashboard geeft zoekmachines de instructie niet te indexeren.
+- `.gitignore` sluit lokale `.env`-bestanden, certificaten en buildoutput uit.
+- Externe Google Fonts-aanvraag weggehaald uit de privébeheeromgeving.
+- Een willekeurig falende sessietest is hersteld zodat CI betrouwbaarder is.
+
+**Let op:** het dashboard kan geen server verwijderen, bestanden aanpassen, consolecommando's uitvoeren of back-ups herstellen. Daarvoor is een afzonderlijke geautoriseerde connector nodig met expliciete toestemming en auditlog. Houd de Pterodactyl Client API-sleutel server-side. Roteer eerder gedeelde inlog- en API-secrets zonder ze in GitHub of een chat te plaatsen. Een geslaagde Vercel-deployment is niet automatisch bewijs van een werkende ChatGPT↔MC-Node-koppeling.
