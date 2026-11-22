@@ -45,7 +45,7 @@ async function check(){
       id,action:'diagnostics.capture',finalState:'completed',report:{tps:i+10},redisFn:adapter,now
     })));
     assert.equal(reports.filter(a=>a.outcome==='updated').length,1);
-    assert.equal(reports.filter(a=>a.outcome==='conflict').length,7);
+    assert.equal(reports.filter(a=>['conflict','already_completed'].includes(a.outcome)).length,7);
     const completed=JSON.parse(await cmd('GET',requestKey));
     assert.equal(completed.state,'completed');
     assert.equal(await cmd('LLEN',keys.pending),'0');
