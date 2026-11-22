@@ -74,3 +74,18 @@ test('audit API returns only safe metadata to an authenticated admin',async()=>{
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
   }
 });
+
+test('audit reader excludes events older than thirty days and implausible future events',async()=>{
+  const now=Date.now();
+  const make=at=>JSON.stringify({...event,at:new Date(at).toISOString()});
+  const rows=[
+    make(now+10*60*1000),
+    make(now-31*24*60*60*1000),
+    make(now-3*60*60*1000)
+  ];
+  const output=await readAudit(async name=>{
+    assert.equal(name,'LRANGE');return rows;
+  });
+  assert.equal(output.length,1);
+  assert.equal(output[0].action,'diagnostics.capture');
+});
