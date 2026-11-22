@@ -41,3 +41,16 @@ Er bestaat nog geen vanuit ChatGPT rechtstreeks toegankelijke MC-Node-connector.
 - De experimentele server-JAR behoudt de originele Paperclip en bundelt NexifyStaff 2.3.0 + Security + Crossplay.
 - Bestaande plugin-JARs worden **niet automatisch overschreven**. De eigenaar moet vooraf een herstelbare externe back-up maken.
 - Tests/CI tonen geen bevestiging van live Java 25-start of MC-Node Cloud Bridge-synchronisatie.
+
+
+## Verfijningen voor NexifyStaff 2.4.0 (Minecraft 2.0.1)
+
+De agent ondersteunt ook de numerieke velden `startup_high` en `startup_warnings`. Dit zijn **alleen aantallen** uit de lokale, read-only startupcontrole; geen paden, namen of inhoud. De velden ontbreken bij oudere plug-ins.
+
+De webopdrachtwachtrij laat `backup.now` en `diagnostics.capture` maximaal **20 minuten** in de status `pending` staan. Verouderde aanvragen worden `expired`, verwijderd uit de actieve wachtrij en **nooit** alsnog naar de Java-agent verstuurd. De aanvraaggeschiedenis blijft leesbaar.
+
+De webapp houdt een **beperkt operationeel logboek** bij van aangevraagde en afgeronde acties (`/api/audit`), uitsluitend voor ingelogde beheerders, zonder IP-adressen, spelersinformatie of secretwaarden. Het log is best-effort, maximaal 200 gebeurtenissen; bij het lezen wordt maximaal 30 dagen geschiedenis getoond. Dit is **geen** onveranderbaar juridisch auditregister.
+
+Historische performancegegevens bevatten alleen tijdstip, TPS, MSPT en spelersaantal; maximaal 288 punten met een minimale interval van 5 minuten. `/api/history` toont alleen de laatste **24 uur** en weigert oude of toekomstgedateerde metingen; Redis vervalt na inactiviteit.
+
+**Totaalstatus:** op de laatst gecontroleerde Vercel-productiebuild zijn **43 tests geslaagd**. De Java 2.0.1-bundel is alleen offline gebouwd en getest, niet met Java25 live op MC-Node gestart.
