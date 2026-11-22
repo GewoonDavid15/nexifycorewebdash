@@ -5,6 +5,7 @@ import {POST as sync} from '../app/api/agent/sync/route.js';
 import {POST as ack} from '../app/api/agent/ack/route.js';
 import {POST as reportDiagnostics} from '../app/api/agent/report/route.js';
 import {GET as status} from '../app/api/status/route.js';
+import {GET as historyRoute} from '../app/api/history/route.js';
 import {GET as list,POST as create} from '../app/api/requests/route.js';
 
 process.env.AGENT_SECRET='a'.repeat(64);
@@ -98,6 +99,16 @@ test('diagnostic reports reject unknown IDs and inappropriate content',async()=>
   assert.equal(r.status,400);
   r=await reportDiagnostics(request('/api/agent/report','POST',{id:'f8b040d3-8d90-42b6-b9e0-9d134147f6f5',report:{password:'PRIVATE'}},authHeader));
   assert.equal(r.status,400);
+});
+
+test('historical performance samples are private and require login',async()=>{
+  const forbidden=await historyRoute({cookies:new Map()});assert.equal(forbidden.status,401);
+  const success=await historyRoute(auth());assert.equal(success.status,200);
+  const payload=await success.json();
+  assert.ok(Array.isArray(payload.points));
+  assert.ok(payload.points.length<=288);
+  assert.ok(payload.points.every(row=>Object.keys(row).every(key=>['at','tps','mspt','players'].includes(key))));
+  assert.ok(!JSON.stringify(payload).includes('player_uuid'));
 });
 
 process.on('exit',()=>{globalThis.fetch=original});
