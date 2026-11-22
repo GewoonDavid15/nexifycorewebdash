@@ -33,7 +33,7 @@ Bij een eerdere live MC-Node-start op Java 25 laadden alle drie Nexify-plugins s
 - **Backup-aanvraag:** `/api/requests` maakt een geauthenticeerde, beperkte aanvraag aan; de Minecraft-plugin vereist nog **echte console-goedkeuring** via `ncontrol approve <id>` voordat een lokale back-up gestart wordt.
 - **Bestaande Redis:** `lib/redis.js` gebruikt `UPSTASH_REDIS_REST_*` of `KV_REST_API_*`. Alle projectkeys beginnen met `nexify:cloud:main:v1:`.
 - **MC-Node read-only overzicht:** `lib/mcnode.js` gebruikt server-side `MCNODE_PANEL_URL`, `MCNODE_CLIENT_API_KEY` en `MCNODE_SERVER_ID`; alleen Pterodactyl GET-verzoeken voor info, resources en pluginbestandsnamen. `/api/mcnode/overview` vereist login.
-- **Tests:** `npm test`; `npm run build` voert eerst tests uit. Laatst bevestigde Vercel-build: 18 tests geslaagd en productiebuild READY. Volledige live MC-Node API-bereikbaarheid is **nog niet bevestigd**.
+- **Tests:** `npm test`; `npm run build` voert eerst tests uit. Laatst bevestigde Vercel-build: 22 tests geslaagd en productiebuild READY. Volledige live MC-Node API-bereikbaarheid is **nog niet bevestigd**.
 
 ## 4. Actuele beveiligings- en bevoegdheidsgrenzen
 - De gebruiker heeft eerder secrets, waaronder een MC-Node Client API-key, in de chat gedeeld. Neem **nooit** originele of vervangende waarden over in code, docs, issues, PR's of prompts. **Rotatie is dringend aan te raden.**
@@ -64,3 +64,14 @@ Bij een eerdere live MC-Node-start op Java 25 laadden alle drie Nexify-plugins s
 ## 7. Eerste opdracht om in Codex te plakken
 
 > Lees AGENTS.md en docs/CODEX_HANDOFF.md. Neem dit bestaande Nexify Enterprise-dashboard over. Inspecteer en test de huidige Next.js-app en API. Verifieer dat de MC-Node-integratie alleen-lezen is, dat bestaande Redis KV keys ongewijzigd blijven, en dat secrets nergens uitlekken. Doe eerst een veiligheids- en compatibiliteitsreview, maak daarna een concreet implementatieplan voor een geautoriseerde AI-op-verzoek-MC-Node-connector (MCP) en de uitbreidingen van het dashboard. Bouw alleen de veilige read-only basis met tests. Doe geen destructieve live acties of productiecredentiaalrotatie zonder expliciet verzoek. Geef je resultaat en openstaande stappen in normaal Nederlands.
+
+
+## Bijgewerkt na Control Center 0.2
+
+Op 22 november 2026 is de Next.js-webomgeving in dezelfde repository grondig vernieuwd. De tabbladen zijn **Overzicht**, **MC-Node hosting**, **Back-ups & taken** en **Activiteit**. De interface bevat een grafiek met **echte** TPS-metingen, MC-Node RAM- en schijfmeters, een doorzoekbare pluginlijst, alleen-lezen back-up- en schedulemetadata, activiteitsgebeurtenissen en diagnose die zonder secrets kan worden gekopieerd. Maak niet de fout deze browserfuncties voor een live Minecraft- of ChatGPT-toolverbinding te houden.
+
+De bestaande Cloud Bridge-back-upaanvraag heeft een browserbevestiging én een Redis-cooldown van 60 seconden. Echte uitvoering blijft achter handmatige Minecraft-console-goedkeuring. Bij een extern opslagprobleem kunnen aanvragen mislukken; wijs de gebruiker daarop, voer geen ongecontroleerde herhalingen uit.
+
+De website gebruikt vastgepinde Next.js 16.4.6 en React 19.2.9, extra security headers, robots noindex en geüpdatete Git-ignore-regels. De laatst geverifieerde Vercel-build van deze code passeerde 22 tests en meldde READY; online MC-Node API-bereikbaarheid en de Minecraft heartbeat zijn **niet** extern bevestigd.
+
+**Nieuwe prioriteiten voor Codex:** behoud alle vier tabbladen; verbeter backenddiagnoses, rolgebaseerde toegang en observability zonder originele secrets te zien of op te slaan. Ontwerp een afzonderlijke connector voor ChatGPT-op-verzoek. Voeg nooit een willekeurige console-, schrijf-, reinstall- of restorefunctie toe zonder expliciete autorisatie en sterke beperkingen.
