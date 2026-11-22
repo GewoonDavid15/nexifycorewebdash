@@ -17,7 +17,7 @@ De webversie is een **prototype** en géén volledige vervanger van alle eerdere
 
 - GitHub-repository voor deze map.
 - Vercel-project (Next.js). Vercel maakt automatisch een HTTPS-webadres.
-- Een Upstash Redis-database met REST API (URL en token in Vercel Environment Variables).
+- Je bestaande Vercel KV/Upstash Redis-database met REST API. Er is geen tweede database nodig.
 - Node.js 20.9 of hoger om lokaal de geheime waarden te genereren.
 - Nexify v1.9.0 Cloud Bridge-plugin op MC-Node, naast Paper 26.3 en Java 25.
 
@@ -27,9 +27,9 @@ De webversie is een **prototype** en géén volledige vervanger van alle eerdere
 2. Installeer lokaal: `npm install`.
 3. Maak je geheimen lokaal: `npm run generate-secrets`. Kies een lang, uniek wachtwoord. Dit toont waarden voor `AGENT_SECRET`, `SESSION_SECRET`, `DASHBOARD_PASSWORD_HASH` en `DASHBOARD_TOTP_SECRET`. **Plak ze nooit in GitHub of in een chat.**
 4. Voeg de `DASHBOARD_TOTP_SECRET` als handmatige TOTP-sleutel toe aan je authenticator-app (6 cijfers, 30 seconden).
-5. Maak Upstash Redis aan en ontvang `UPSTASH_REDIS_REST_URL` en `UPSTASH_REDIS_REST_TOKEN`.
+5. Hergebruik de bestaande Vercel KV-integratie. De app gebruikt automatisch `KV_REST_API_URL` en `KV_REST_API_TOKEN`; handmatige `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` blijven ook mogelijk.
 6. Ga naar Vercel → Add New Project → Import GitHub-repository → Framework Next.js.
-7. Vul in Vercel → Settings → Environment Variables alle **zes** waarden in. Vercel gebruikt `.env.example` alleen als voorbeeld; het is geen echte configuratie.
+7. Controleer in Vercel → Settings → Environment Variables dat de vier dashboardgeheimen en de bestaande Vercel KV-variabelen beschikbaar zijn voor Production. Deel nooit een token in GitHub of een chat.
 8. Deploy het project. Je ontvangt een adres als `https://jouw-nexify.vercel.app`.
 9. Vul **dezelfde `AGENT_SECRET`** op MC-Node in via een environment variable, of bij gebrek aan die mogelijkheid privé in de Nexify-pluginconfiguratie (zie de hoofdhandleiding).
 10. Open je Vercel-URL en log in met het gekozen wachtwoord en een actuele 2FA-code.
@@ -53,3 +53,9 @@ De server synchroniseert standaard elke 30 seconden. Na 2 minuten zonder nieuwe 
 ## Lokaal testen
 
 `npm test` test authenticatie en de API-synchronisatie met een gesimuleerde Redis-server. De uiteindelijke `next build` en Vercel-deployment moeten nog met echte geïnstalleerde Next.js-dependencies worden getest.
+
+## Bestaande gratis Redis-database hergebruiken
+
+Nexify heeft **geen tweede database** nodig. De code gebruikt rechtstreeks `KV_REST_API_URL` en `KV_REST_API_TOKEN` die Vercel bij een bestaande Upstash/KV-integratie beschikbaar maakt. Als deze ontbreken, werken de bestaande handmatige `UPSTASH_REDIS_REST_URL` en `UPSTASH_REDIS_REST_TOKEN` ook. Nexify slaat gegevens op met het voorvoegsel `nexify:cloud:main:v1:` zodat de keys van andere projecten niet worden overschreven. Wel deelt de app de gebruikslimieten van dezelfde database.
+
+De code hoort in GitHub; databasegeheimen blijven uitsluitend in Vercel Environment Variables. Na een nieuwe deployment moet de MC-Node Cloud Bridge dezelfde agent-secret gebruiken als de server-side Vercel-configuratie. De broncode is een prototype; houd de Minecraft-server eerst beschermd en maak back-ups.
