@@ -134,3 +134,10 @@ In deze versie vervallen niet-opgepakte Cloud Bridge-opdrachten na **20 minuten*
 De experimentele Minecraft 2.0.1-release en checksums staan beschreven in `docs/MINECRAFT_2_0_1_RELEASE.md`; de volledige Java-broncode zit nog apart in het ChatGPT-releasearchief, **niet** in deze publieke GitHub-webrepository. Installatie op een MC-Node-productieserver is **niet uitgevoerd**.
 
 Laatst geverifieerde Vercel-build: **43 tests geslaagd, 0 fouten, deployment READY**. De Minecraft Java25-test op MC-Node, werkelijke hosting-API-bereikbaarheid en volledige ChatGPT-connector zijn nog niet geverifieerd.
+
+
+## Systeemcontrole — beveiligde configuratiecheck
+
+Nieuw dashboardtabblad **Systeemcontrole** met een sessieafgeschermde API op `/api/system/readiness`. Controleert of scrypt-login, TOTP, de dashboard-sessiesleutel, Cloud Bridge, de bestaande Redis-database en optionele MC-Node-koppeling correct zijn ingesteld. De Redis-verbinding wordt met een echte PING getest; het statusoverzicht toont uitsluitend veilige labels en booleans, **nooit geheime waarden**. De gebruiker ziet het vervaltijdstip van de huidige sessie en kan op het eigen apparaat uitloggen.
+
+**Belangrijk:** `Ingesteld` betekent niet automatisch live verbonden met de Minecraft-JAR. Er bestaan nog geen individuele webaccounts of uitgebreide rollenrechten. Lees `docs/SECURITY_READINESS.md` en de bijbehorende nieuwe GitHub Issue #3 voor de veilige migratieaanpak.
