@@ -63,3 +63,14 @@ Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit reques
 - `lib/health.js` provides non-destructive health alerts based on actual measurements. Never imply it repairs or monitors the server continuously by itself.
 - Local read-only Codex MCP implementation: `tools/mcnode-mcp/server.mjs`; setup instructions in `tools/mcnode-mcp/README.md`. This does not automatically authorize ChatGPT to control MC-Node.
 - If a subsequent task needs write actions, design scoped permissions, explicit user approval, audit and recoverable backups first. Never add general shell, uncontrolled file writes, reinstalls or world restorations to a public endpoint.
+
+
+## Latest handoff — NexifyStaff 2.4.0 / server 2.0.1
+
+- Read `docs/MINECRAFT_2_0_1_RELEASE.md` and `docs/CLOUD_PROTOCOL_V2.md`; the previous `docs/MINECRAFT_2_RELEASE.md` is historical.
+- The experimental Java 2.0.1 release includes one-time startup maintenance scanning with **only** counts `startup_high` and `startup_warnings` sent over outbound Cloud Bridge.
+- Cloud Bridge requests are pruned in `lib/queue.js` after 20 minutes; never revive `expired` requests. Their history remains visible.
+- `lib/audit.js` / `/api/audit` implement a limited best-effort admin operations log, **not** immutable compliance-grade auditing. Never log secrets or player identities.
+- Historical performance and audit routes enforce 24h/30d visibility windows. Do not create a second Redis database.
+- `.github/workflows/ci.yml` provides PR/manual tests; the latest Vercel code check passed **43/43 tests**.
+- Java source is packaged separately and was **not** committed in full to this GitHub web repository; don't pretend a Java production deployment has occurred. Java25/MC-Node runtime verification is still missing.
