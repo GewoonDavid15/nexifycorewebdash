@@ -10,3 +10,14 @@
 .health-alert strong{font-size:13px;color:#f3ddba}
 .health-alert p{font-size:12px;margin:5px 0 0;line-height:1.6;color:#bea99e}
 .diagnostic-fields{margin-top:18px;padding:14px;border:1px solid #32496a;border-radius:11px;background:#10213a}
+
+/* Systemcontrole: authenticated read-only configuration readiness */
+.readiness-list{display:grid;gap:0}
+.readiness-item{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 0;border-bottom:1px solid #2a3c56}
+.readiness-item:first-child{padding-top:0}
+.readiness-item:last-child{border-bottom:0}
+.readiness-detail{min-width:0}
+.readiness-detail strong{font-size:13px;color:#e9f3ff}
+.readiness-detail p{font-size:12px;color:#8fa5c3;margin:4px 0 0;line-height:1.6}
+.readiness-item .status-chip{flex-shrink:0}
+@media(max-width:550px){.readiness-item{align-items:flex-start;flex-direction:column;gap:9px}.readiness-item .status-chip{align-self:flex-start}}
