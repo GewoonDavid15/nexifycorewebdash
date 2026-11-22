@@ -1,0 +1,22 @@
+import {requestAuthorized,json} from '../../../lib/security.js';
+import {redis,keys} from '../../../lib/redis.js';
+export const runtime='nodejs';
+export const dynamic='force-dynamic';
+
+export async function GET(req) {
+  if(!requestAuthorized(req))return json({error:'Unauthorized'},401);
+  try{
+    const rows=await redis('LRANGE',keys.history,0,287);
+    const points=[];
+    for(const item of rows||[]){
+      try{
+        const raw=JSON.parse(item);
+        if(typeof raw.at!=='string'||Number.isNaN(Date.parse(raw.at)))continue;
+        const n=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<1e9?v:null;
+        points.push({at:raw.at,tps:n(raw.tps),mspt:n(raw.mspt),players:n(raw.players)});
+      }catch{}
+    }
+    points.reverse();
+    return json({points,retention:'at most 288 points, sampled every 5 minutes'});
+  }catch{return json({error:'History temporarily unavailable'},503);}
+}
