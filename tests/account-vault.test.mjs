@@ -30,7 +30,7 @@ test('tampered ciphertext or authentication tag cannot be decrypted',()=>{
   const config=env(),secret=generateTotpSecret();
   const sealed=sealTotpSecret({accountId:one,secret,env:config});
   const p=sealed.split('.');
-  const mutate=(v)=>v.slice(0,-1)+(v.endsWith('A')?'B':'A');
+  const mutate=(v)=>(v.startsWith('A')?'B':'A')+v.slice(1);
   assert.throws(()=>unsealTotpSecret({accountId:one,sealed:[p[0],p[1],mutate(p[2]),p[3]].join('.'),env:config}),/Cannot unlock/);
   assert.throws(()=>unsealTotpSecret({accountId:one,sealed:[p[0],p[1],p[2],mutate(p[3])].join('.'),env:config}),/Cannot unlock/);
   assert.throws(()=>unsealTotpSecret({accountId:one,sealed:'v2.'+p.slice(1).join('.'),env:config}),/Cannot unlock/);
