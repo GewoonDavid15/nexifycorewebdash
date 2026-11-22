@@ -82,3 +82,11 @@ De website gebruikt vastgepinde Next.js 16.4.6 en React 19.2.9, extra security h
 Een nieuw afgeschermd dashboardtabblad **Systeemcontrole** bevat een read-only readiness-API (`/api/system/readiness`). Alleen na een geldige ondertekende sessie worden configuratiestatussen, een Redis-PING en het vervaltijdstip van de huidige sessie getoond, zonder geheime waarden. Het tabblad bevat een uitlogknop voor dit apparaat.
 
 Dit is **nog geen multi-account accountmanager**. De bestaande owner-login is bewust ongewijzigd; voor individuele staffaccounts en RBAC hoort een migratieplan met geteste sessie-intrekking, server-side permission checks en rollback. Zie GitHub Issue #3 en `docs/SECURITY_READINESS.md`.
+
+
+## Huidige ontwikkelfase: RBAC en accountbasis
+De webrepository heeft nu een rolmodel (`lib/rbac.js`), veilige accountrecords (`lib/account-model.js`), experimentele, intrekbare individuele sessies (`lib/account-sessions.js`) en een read-only voorbeeld-API `/api/system/roles`. Het dashboard laat dit in **Systeemcontrole** zien.
+
+**Essentieel:** de eigenlijke webaccountregistratie en -login zijn niet aangesloten. De bestaande eigenaar-login blijft volledig leidend. Codex mag deze niet verwijderen of stilzwijgend migreren. Alle nieuwe routes moeten echte server-side autorisatie en afzonderlijke MFA hebben; geen onbeperkte serverconsole of bestandsschrijffuncties.
+
+Zie `docs/RBAC_FOUNDATION.md` en Issue #3 voor de vereiste server-side accountopslag, rolchecks, atomiciteit en staging-rollback. De RBAC-basis werd met **59 geautomatiseerde tests** geverifieerd.
