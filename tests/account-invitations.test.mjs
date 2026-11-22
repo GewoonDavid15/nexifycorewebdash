@@ -38,6 +38,7 @@ function mockRedis(){
       if(!targetRaw)return null;
       const target=JSON.parse(targetRaw);
       if(target.id!==accountId||target.status!=='invited'||target.role==='owner')return null;
+      if(target.role!==payload.role||target.session_version!==payload.session_version)return null;
       db.delete(tokKey);db.delete(accountKey);return accountId;
     }
     throw new Error('Unexpected Redis command '+command);
@@ -116,4 +117,12 @@ test('malformed tokens are refused without accessing Redis',async()=>{
     assert.equal(await consumeInvitationToken({token:invalid,accountId:user.id,redisFn:store.fn,now}),null);
   }
   assert.equal(store.calls.length,0);
+});
+
+test('role changes or version bumps invalidate an existing invitation',async()=>{
+  const store=mockRedis(),user=invited('member_to_promote');
+  store.seed(owner);store.seed(user);
+  const invite=await issueInvitationToken({actor:owner,accountId:user.id,redisFn:store.fn,now});
+  store.seed({...user,role:'administrator',session_version:user.session_version+1});
+  assert.equal(await consumeInvitationToken({token:invite.token,accountId:user.id,redisFn:store.fn,now:now+100}),null);
 });
