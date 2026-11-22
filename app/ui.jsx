@@ -2,7 +2,6 @@
 import {useEffect,useState,useCallback,useMemo} from 'react';
 
 const TABS=[{id:'overview',label:'Overzicht',icon:'◫'},{id:'hosting',label:'MC-Node hosting',icon:'▣'},{id:'backups',label:'Back-ups & taken',icon:'▤'},{id:'activity',label:'Activiteit',icon:'◷'}];
-const money=unused=>unused;
 const num=(v,places=0)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('nl-NL',{maximumFractionDigits:places,minimumFractionDigits:places}):'—';
 const bytes=(v)=>typeof v==='number'&&Number.isFinite(v)?(v/1073741824).toLocaleString('nl-NL',{maximumFractionDigits:2})+' GB':'—';
 const uptime=(v)=>typeof v==='number'&&v>=0?Math.floor(v/3600000)+'u '+Math.floor(v%3600000/60000)+'m':'—';
@@ -105,6 +104,32 @@ export default function Dashboard({initialAuthorized}){
       setTab('backups');
     }catch(e){setError(e.message)}finally{setBusy(false)}
   }
+  async function copyDiagnostics(){
+    const safe={
+      generated_at:new Date().toISOString(),
+      cloud_bridge:{
+        connected:status?.online===true,
+        last_heartbeat:status?.status?.received_at||null,
+        plugin_version:status?.status?.plugin_version||null
+      },
+      mcnode:{
+        configured:mcnode?.configured===true,
+        connected:mcnode?.connected===true,
+        error_code:mcnode?.code||null,
+        server_state:mcnode?.state||null,
+        plugin_access:mcnode?.pluginStatus||null,
+        backups_access:mcnode?.backupStatus||null,
+        schedules_access:mcnode?.scheduleStatus||null,
+        activity_access:mcnode?.activityStatus||null
+      },
+      dashboard:{last_refresh:lastRefresh?.toISOString()||null}
+    };
+    try{
+      if(!navigator.clipboard?.writeText)throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(JSON.stringify(safe,null,2));
+      setError('');setNotice('Veilige diagnose gekopieerd. Er staan geen API-sleutels of privébestanden in.');
+    }catch{setError('Kopiëren is niet beschikbaar in deze browser.');}
+  }
   const live=Boolean(status?.online&&status?.status);
   const game=status?.status||{};
   const panelOnline=mcnode?.connected===true;
@@ -180,7 +205,7 @@ export default function Dashboard({initialAuthorized}){
             <Section title="Cloud Bridge-aanvragen" subtitle="Aanvragen via dit dashboard; de echte serverconsole beslist over uitvoering.">{requests.length?<div className="record-list">{requests.map(x=><div className="record" key={x.id}><span className="record-icon"><Icon name="archive" size={18}/></span><div className="record-copy"><strong>Back-upaanvraag</strong><small>{dt(x.created_at)}</small></div><span className="small-pill">{x.state==='pending'?'Wacht op server':x.state==='awaiting_console'?'Console-goedkeuring #'+x.local_id:x.state||'Onbekend'}</span></div>)}</div>:<p className="muted">Nog geen aanvragen via het dashboard.</p>}<div className="panel-note"><Icon name="alert" size={16}/> Bij console-goedkeuring gebruik je <code>ncontrol approve &lt;nummer&gt;</code>.</div></Section>
           </>}
           {tab==='activity'&&<>
-            <div className="section-intro"><div><h2>Activiteit & controles</h2><p>Inzichten in de hostingactiviteit en betrouwbaarheid van de koppelingen.</p></div><Status muted>Alleen lezen</Status></div>
+            <div className="section-intro"><div><h2>Activiteit & controles</h2><p>Inzichten in de hostingactiviteit en betrouwbaarheid van de koppelingen.</p></div><button className="btn btn-secondary" onClick={copyDiagnostics}><Icon name="copy" size={16}/> Kopieer diagnose</button></div>
             <div className="two-column">
               <Section title="Recente hostingactiviteit" subtitle="Gebeurtenistypen zonder gevoelige metadata.">{mcnode?.activityStatus!=='available'?<p className="muted">Activiteitslog: {permissionLabel(mcnode?.activityStatus)}.</p>:mcnode?.activity?.length?<div className="record-list">{mcnode.activity.map((a,i)=><div className="record" key={i}><span className="record-icon"><Icon name="list" size={18}/></span><div className="record-copy"><strong>{a.event}</strong><small>{dt(a.createdAt)}</small></div></div>)}</div>:<p className="muted">Nog geen hostingactiviteit gevonden.</p>}</Section>
               <Section title="Verbindingscontrole" subtitle="Wat het dashboard daadwerkelijk kan bevestigen."><Field name="Minecraft heartbeat" value={live?'Actueel':'Geen recente gegevens'}/><Field name="MC-Node API" value={panelOnline?'Bereikbaar':mcnode?.error||'Niet bereikbaar'}/><Field name="Pluginlijst" value={permissionLabel(mcnode?.pluginStatus)}/><Field name="Back-upoverzicht" value={permissionLabel(mcnode?.backupStatus)}/><Field name="Takenoverzicht" value={permissionLabel(mcnode?.scheduleStatus)}/><Field name="Activiteitslog" value={permissionLabel(mcnode?.activityStatus)}/><div className="panel-note"><Icon name="shield" size={16}/> Status alleen gebaseerd op echte API-antwoorden. Geen automatische consoleacties of bestandsschrijvingen.</div></Section>
