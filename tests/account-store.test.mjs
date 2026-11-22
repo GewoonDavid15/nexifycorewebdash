@@ -30,16 +30,18 @@ function memory(){
     if(command==='EVAL'){
       const [script,count,...values]=args;
       if(script===CREATE_ACCOUNT_LUA){
-        assert.equal(count,3);
-        const [recordKey,nameKey,indexKey,value,id,score]=values;
+        assert.equal(count,4);
+        const [recordKey,nameKey,indexKey,actorKey,value,id,score,expectedActor]=values;
+        if(db.get(actorKey)!==expectedActor)return -1;
         if(db.has(recordKey)||db.has(nameKey))return 0;
         db.set(recordKey,value);db.set(nameKey,id);
         scores.set(indexKey,[...(scores.get(indexKey)||[]),[id,Number(score)]]);
         return 1;
       }
       if(script===UPDATE_ACCOUNT_LUA){
-        assert.equal(count,1);
-        const [recordKey,oldValue,newValue]=values;
+        assert.equal(count,2);
+        const [recordKey,actorKey,oldValue,newValue,expectedActor]=values;
+        if(db.get(actorKey)!==expectedActor)return -2;
         if(db.get(recordKey)!==oldValue)return 0;
         const old=JSON.parse(oldValue),current=JSON.parse(newValue);
         if(old.id!==current.id||old.username!==current.username||
@@ -158,4 +160,35 @@ test('invalid IDs, malformed storage and username mismatches fail closed',async(
   store.db.set(keys.identityUsername('not_found'),'33333333-3333-4333-8333-333333333333');
   assert.equal(await loadByUsername('not_found',store.redisFn),null);
   await assert.rejects(reserveInvitation({actor:{...owner,status:'suspended'},username:'no_access',redisFn:store.redisFn,now}),/Not authorized/);
+});
+
+test('actor suspension during an invitation prevents the atomic write',async()=>{
+  const store=memory();store.seed(admin);
+  const wrapped=async(cmd,...args)=>{
+    if(cmd==='EVAL'&&args[0]===CREATE_ACCOUNT_LUA){
+      store.db.set(keys.identityAccount(admin.id),JSON.stringify({...admin,status:'suspended',session_version:admin.session_version+1}));
+    }
+    return store.redisFn(cmd,...args);
+  };
+  await assert.rejects(
+    reserveInvitation({actor:admin,username:'too_late',role:'viewer',redisFn:wrapped,now}),
+    /Could not reserve account/
+  );
+  assert.equal(await loadByUsername('too_late',store.redisFn),null);
+});
+
+test('revoking the actor mid-change prevents privilege edits',async()=>{
+  const store=memory();store.seed(owner);
+  const ticket=await reserveInvitation({actor:owner,username:'target_to_change',redisFn:store.redisFn,now});
+  const wrapped=async(cmd,...args)=>{
+    if(cmd==='EVAL'&&args[0]===UPDATE_ACCOUNT_LUA){
+      store.db.set(keys.identityAccount(owner.id),JSON.stringify({...owner,status:'suspended',session_version:owner.session_version+1}));
+    }
+    return store.redisFn(cmd,...args);
+  };
+  await assert.rejects(
+    changeStoredRole({actor:owner,id:ticket.account.id,targetRole:'operator',redisFn:wrapped}),
+    /Account modified concurrently/
+  );
+  assert.equal((await loadAccount(ticket.account.id,store.redisFn)).role,'viewer');
 });
