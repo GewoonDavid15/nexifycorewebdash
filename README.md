@@ -123,3 +123,14 @@ Documenten:
 - `tools/mcnode-mcp/README.md`: Codex MCP lokaal installeren zonder API-sleutels in git.
 
 **Status:** de laatste gecontroleerde Vercel-builds hadden 30 geslaagde tests. De volledige Minecraft 2.0-broncode is apart als ZIP gebouwd en staat nog niet in deze webrepository; de live MC-Node Java25-server is niet aangepast. De remote diagnosefunctie kan pas antwoorden wanneer NexifyStaff 2.3.0 daadwerkelijk draait en de geroteerde Cloud Bridge-sleutel klopt. Er is geen betaalde Redis-database toegevoegd.
+
+
+## Nexify Minecraft 2.0.1 en verdere beheeruitbreidingen
+
+De webapp is bijgewerkt voor de nieuwe **NexifyStaff 2.4.0**-diagnostiek: naast TPS/MSPT kan de plugin na een veilige lokale opstartcontrole alleen de aantallen `startup_high` en `startup_warnings` doorgeven. Het dashboard toont bij problemen een waarschuwing, zonder serveracties uit te voeren.
+
+In deze versie vervallen niet-opgepakte Cloud Bridge-opdrachten na **20 minuten** (ze blijven met status `expired` zichtbaar), is er een privé **Beheeractiviteiten**-overzicht, worden oude prestatiegegevens gefilterd na **24 uur** en auditregels na **30 dagen**, en zijn er extra tests. Voor Codex zijn er read-only MCP-tools en een GitHub Actions PR-/handmatige CI-workflow.
+
+De experimentele Minecraft 2.0.1-release en checksums staan beschreven in `docs/MINECRAFT_2_0_1_RELEASE.md`; de volledige Java-broncode zit nog apart in het ChatGPT-releasearchief, **niet** in deze publieke GitHub-webrepository. Installatie op een MC-Node-productieserver is **niet uitgevoerd**.
+
+Laatst geverifieerde Vercel-build: **43 tests geslaagd, 0 fouten, deployment READY**. De Minecraft Java25-test op MC-Node, werkelijke hosting-API-bereikbaarheid en volledige ChatGPT-connector zijn nog niet geverifieerd.
