@@ -46,7 +46,7 @@ export default function Dashboard({initialAuthorized}){
   const [authorized,setAuthorized]=useState(initialAuthorized),[password,setPassword]=useState(''),[code,setCode]=useState('');
   const [tab,setTab]=useState('overview'),[error,setError]=useState(''),[loading,setLoading]=useState(false);
   const [status,setStatus]=useState(null),[requests,setRequests]=useState([]),[mcnode,setMcnode]=useState(null),[audit,setAudit]=useState([]);
-  const [readiness,setReadiness]=useState(null),[readinessError,setReadinessError]=useState(''),[readinessBusy,setReadinessBusy]=useState(false);
+  const [readiness,setReadiness]=useState(null),[readinessError,setReadinessError]=useState(''),[readinessBusy,setReadinessBusy]=useState(false),[rolesPreview,setRolesPreview]=useState(null);
   const [refreshing,setRefreshing]=useState(false),[lastRefresh,setLastRefresh]=useState(null),[busy,setBusy]=useState(false);
   const [confirmBackup,setConfirmBackup]=useState(false),[pluginQuery,setPluginQuery]=useState(''),[history,setHistory]=useState([]);
   const [notice,setNotice]=useState(''),[hostError,setHostError]=useState(''),[cloudError,setCloudError]=useState('');
@@ -104,6 +104,10 @@ export default function Dashboard({initialAuthorized}){
       if(!response.ok)throw new Error('Systeemcontrole is tijdelijk niet beschikbaar.');
       const body=await response.json();
       setReadiness(body);
+      try{
+        const preview=await fetch('/api/system/roles',{cache:'no-store'});
+        setRolesPreview(preview.ok?await preview.json():null);
+      }catch{setRolesPreview(null);}
     }catch(err){setReadinessError(err.message||'Systeemcontrole mislukt.');}
     finally{setReadinessBusy(false);}
   },[authorized]);
@@ -117,7 +121,7 @@ export default function Dashboard({initialAuthorized}){
     }catch(err){setError(err.message)}finally{setLoading(false)}
   }
   async function logout(){
-    try{await fetch('/api/auth/logout',{method:'POST'})}finally{setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setAudit([]);setHistory([]);setReadiness(null);setTab('overview')}
+    try{await fetch('/api/auth/logout',{method:'POST'})}finally{setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setAudit([]);setHistory([]);setReadiness(null);setRolesPreview(null);setTab('overview')}
   }
   async function requestBackup(){
     setBusy(true);setConfirmBackup(false);setNotice('');setError('');
@@ -287,6 +291,16 @@ export default function Dashboard({initialAuthorized}){
                       <Status good={item.status==='ready'} muted={item.status==='optional'}>{item.status==='ready'?'Ingesteld':item.status==='optional'?'Optioneel':item.status==='invalid'?'Ongeldig':'Ontbreekt'}</Status>
                     </div>)}
                   </div>
+                </Section>
+                <Section title="Rollen & accountrechten" subtitle="Voorbereid rechtenmodel. Nieuwe staffaccounts en uitnodigingen zijn nog niet ingeschakeld.">
+                  {rolesPreview?.mode==='preview'?<div className="role-preview-grid">
+                    {(rolesPreview.roles||[]).map(role=><div className="role-preview-card" key={role.key}>
+                      <div className="role-preview-top"><strong>{role.label}</strong><span>{role.permissions.length} rechten</span></div>
+                      <p>{role.description}</p>
+                      <div className="role-preview-chips">{role.permissions.map(right=><span key={right}>{right}</span>)}</div>
+                    </div>)}
+                  </div>:<p className="muted">Het overzicht met toekomstige accountrechten is tijdelijk niet beschikbaar.</p>}
+                  <div className="panel-note"><Icon name="shield" size={16}/> Voorbeeldmodus: geen nieuwe accounts aangemaakt, bestaande eigenaar-login en alle huidige API-bevoegdheden ongewijzigd.</div>
                 </Section>
                 <div className="two-column">
                   <Section title="Echte verbindingsstatus" subtitle="Deze gegevens komen uit de bestaande live controles.">
