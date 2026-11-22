@@ -55,3 +55,17 @@ De tests controleren de beoogde `EVAL`-parameters en het gedrag van de opslag-AP
 7. Live Cloud Bridge en MC-Node-beheer blijven buiten deze migratie; geen directe file- of console-acties.
 
 Zie ook `docs/RBAC_FOUNDATION.md` en GitHub Issue #3.
+
+
+## Aanvulling: veilige persoonlijke 2FA-opslag
+
+De branch bevat `lib/account-vault.js`, maar geen actieve accountenrollment-API.
+
+- `generateTotpSecret()` maakt per toekomstig account een willekeurig 160-bit Base32-authenticatorgeheim.
+- `sealTotpSecret()` versleutelt dit met **AES-256-GCM** en een eigen, willekeurige nonce. De account-UUID is opgenomen als geauthenticeerde context (AAD), zodat een geheim niet bruikbaar is voor een andere gebruiker.
+- `unsealTotpSecret()` weigert gewijzigde gegevens, verkeerde account-ID's en sleutels die niet overeenkomen.
+- Deze code vraagt later om een aparte server-side variabele **`NEXIFY_ACCOUNT_VAULT_KEY`** met precies 32 willekeurige bytes, gecodeerd als Base64url zonder padding. Er is **nu niets aan Vercel toegevoegd**, want het actieve loginproces gebruikt deze sleutel nog niet.
+- Roteer die sleutel later alleen met een expliciet plan om de bestaande MFA-geheimen opnieuw te versleutelen, anders kunnen accounts buitengesloten worden.
+- Bewaar de onversleutelde eenmalige enrollmentwaarde niet in Redis, logs, GitHub of chat. Voor de uiteindelijke enrollment-route zijn CSRF, een korte verificatieperiode, TOTP-codecontrole en gebruikersbevestiging nodig.
+
+De module wordt offline getest in `tests/account-vault.test.mjs` met willekeurige, tijdelijke testsleutels. Dit bewijst nog geen volledige 2FA-login voor een echt gebruikersaccount.
