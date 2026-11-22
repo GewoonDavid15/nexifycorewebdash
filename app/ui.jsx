@@ -2,7 +2,7 @@
 import {useEffect,useState,useCallback,useMemo} from 'react';
 import {analyzeHealth} from '../lib/health.js';
 
-const TABS=[{id:'overview',label:'Overzicht',icon:'◫'},{id:'hosting',label:'MC-Node hosting',icon:'▣'},{id:'backups',label:'Back-ups & taken',icon:'▤'},{id:'activity',label:'Activiteit',icon:'◷'}];
+const TABS=[{id:'overview',label:'Overzicht',icon:'◫'},{id:'hosting',label:'MC-Node hosting',icon:'▣'},{id:'backups',label:'Back-ups & taken',icon:'▤'},{id:'activity',label:'Activiteit',icon:'◷'},{id:'system',label:'Systeemcontrole',icon:'◇'}];
 const num=(v,places=0)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('nl-NL',{maximumFractionDigits:places,minimumFractionDigits:places}):'—';
 const bytes=(v)=>typeof v==='number'&&Number.isFinite(v)?(v/1073741824).toLocaleString('nl-NL',{maximumFractionDigits:2})+' GB':'—';
 const uptime=(v)=>typeof v==='number'&&v>=0?Math.floor(v/3600000)+'u '+Math.floor(v%3600000/60000)+'m':'—';
@@ -46,6 +46,7 @@ export default function Dashboard({initialAuthorized}){
   const [authorized,setAuthorized]=useState(initialAuthorized),[password,setPassword]=useState(''),[code,setCode]=useState('');
   const [tab,setTab]=useState('overview'),[error,setError]=useState(''),[loading,setLoading]=useState(false);
   const [status,setStatus]=useState(null),[requests,setRequests]=useState([]),[mcnode,setMcnode]=useState(null),[audit,setAudit]=useState([]);
+  const [readiness,setReadiness]=useState(null),[readinessError,setReadinessError]=useState(''),[readinessBusy,setReadinessBusy]=useState(false);
   const [refreshing,setRefreshing]=useState(false),[lastRefresh,setLastRefresh]=useState(null),[busy,setBusy]=useState(false);
   const [confirmBackup,setConfirmBackup]=useState(false),[pluginQuery,setPluginQuery]=useState(''),[history,setHistory]=useState([]);
   const [notice,setNotice]=useState(''),[hostError,setHostError]=useState(''),[cloudError,setCloudError]=useState('');
@@ -94,6 +95,19 @@ export default function Dashboard({initialAuthorized}){
     const timer=setInterval(()=>{if(document.visibilityState==='visible')refresh()},45000);
     return()=>clearInterval(timer);
   },[authorized,refresh]);
+  const loadReadiness=useCallback(async()=>{
+    if(!authorized)return;
+    setReadinessBusy(true);setReadinessError('');
+    try{
+      const response=await fetch('/api/system/readiness',{cache:'no-store'});
+      if(response.status===401){setAuthorized(false);setReadiness(null);return;}
+      if(!response.ok)throw new Error('Systeemcontrole is tijdelijk niet beschikbaar.');
+      const body=await response.json();
+      setReadiness(body);
+    }catch(err){setReadinessError(err.message||'Systeemcontrole mislukt.');}
+    finally{setReadinessBusy(false);}
+  },[authorized]);
+  useEffect(()=>{if(authorized&&tab==='system')loadReadiness();},[authorized,tab,loadReadiness]);
   async function login(e){
     e.preventDefault();setLoading(true);setError('');
     try{
@@ -103,7 +117,7 @@ export default function Dashboard({initialAuthorized}){
     }catch(err){setError(err.message)}finally{setLoading(false)}
   }
   async function logout(){
-    try{await fetch('/api/auth/logout',{method:'POST'})}finally{setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setAudit([]);setHistory([]);setTab('overview')}
+    try{await fetch('/api/auth/logout',{method:'POST'})}finally{setAuthorized(false);setStatus(null);setMcnode(null);setRequests([]);setAudit([]);setHistory([]);setReadiness(null);setTab('overview')}
   }
   async function requestBackup(){
     setBusy(true);setConfirmBackup(false);setNotice('');setError('');
@@ -253,6 +267,42 @@ export default function Dashboard({initialAuthorized}){
               <Section title="Recente hostingactiviteit" subtitle="Gebeurtenistypen zonder gevoelige metadata.">{mcnode?.activityStatus!=='available'?<p className="muted">Activiteitslog: {permissionLabel(mcnode?.activityStatus)}.</p>:mcnode?.activity?.length?<div className="record-list">{mcnode.activity.map((a,i)=><div className="record" key={i}><span className="record-icon"><Icon name="list" size={18}/></span><div className="record-copy"><strong>{a.event}</strong><small>{dt(a.createdAt)}</small></div></div>)}</div>:<p className="muted">Nog geen hostingactiviteit gevonden.</p>}</Section>
               <Section title="Verbindingscontrole" subtitle="Wat het dashboard daadwerkelijk kan bevestigen."><Field name="Minecraft heartbeat" value={live?'Actueel':'Geen recente gegevens'}/><Field name="MC-Node API" value={panelOnline?'Bereikbaar':mcnode?.error||'Niet bereikbaar'}/><Field name="Pluginlijst" value={permissionLabel(mcnode?.pluginStatus)}/><Field name="Back-upoverzicht" value={permissionLabel(mcnode?.backupStatus)}/><Field name="Takenoverzicht" value={permissionLabel(mcnode?.scheduleStatus)}/><Field name="Activiteitslog" value={permissionLabel(mcnode?.activityStatus)}/><div className="panel-note"><Icon name="shield" size={16}/> Status alleen gebaseerd op echte API-antwoorden. Geen automatische consoleacties of bestandsschrijvingen.</div></Section>
             </div>
+          </>}
+          {tab==='system'&&<>
+            <div className="section-intro"><div><h2>Systeemcontrole</h2><p>Bekijk veilig welke Nexify-onderdelen zijn ingesteld en waar nog actie nodig is.</p></div>
+              <button className="btn btn-secondary" onClick={loadReadiness} disabled={readinessBusy}><Icon name="refresh" size={17}/>{readinessBusy?'Controleren…':'Opnieuw controleren'}</button>
+            </div>
+            {readinessError&&<div className="notice error" role="alert"><Icon name="alert" size={18}/>{readinessError}</div>}
+            {!readiness?<Section title="Status controleren" subtitle="Deze controle is alleen voor ingelogde beheerders."><p className="muted">De configuratie wordt gecontroleerd zonder wachtwoorden, hashes of API-sleutels terug te sturen.</p></Section>:
+              <>
+                <div className="metrics-grid">
+                  <Metric icon="shield" label="Ingesteld" value={readiness.summary?.ready??0} description="Configuratie aanwezig"/>
+                  <Metric icon="alert" label="Ontbrekend" value={readiness.summary?.missing??0} description="Vereiste instellingen"/>
+                  <Metric icon="link" label="Fout / optioneel" value={(readiness.summary?.invalid||0)+(readiness.summary?.optional||0)} description="Verbindingen om te controleren"/>
+                </div>
+                <Section title="Beveiliging & integraties" subtitle="Alleen configuratiestatus; geen geheime gegevens worden getoond.">
+                  <div className="readiness-list">
+                    {(readiness.checks||[]).map(item=><div className="readiness-item" key={item.id}>
+                      <div className="readiness-detail"><strong>{item.label}</strong><p>{item.detail}</p></div>
+                      <Status good={item.status==='ready'} muted={item.status==='optional'}>{item.status==='ready'?'Ingesteld':item.status==='optional'?'Optioneel':item.status==='invalid'?'Ongeldig':'Ontbreekt'}</Status>
+                    </div>)}
+                  </div>
+                </Section>
+                <div className="two-column">
+                  <Section title="Echte verbindingsstatus" subtitle="Deze gegevens komen uit de bestaande live controles.">
+                    <Field name="Bestaande Redis" value={readiness.redis_connection==='connected'?'Bereikbaar':readiness.redis_connection==='not_configured'?'Niet ingesteld':'Niet bereikbaar'}/>
+                    <Field name="Minecraft Cloud Bridge" value={live?'Recente heartbeat':'Niet live bevestigd'}/>
+                    <Field name="MC-Node Client API" value={panelOnline?'Bereikbaar':mcnode?.code||'Niet live bevestigd'}/>
+                    <Field name="NexifyStaff-versie" value={live?game.plugin_version:'Onbekend'}/>
+                    <Field name="Laatste controle" value={dt(readiness.generated_at)}/>
+                  </Section>
+                  <Section title="Beheerbeveiliging" subtitle="Wat je moet weten voordat je extra accounts of beheertaken toevoegt.">
+                    <p className="muted">Je huidige dashboard gebruikt één beheerderslogin met wachtwoord en 2FA. Er is nog geen volwaardig multi-account/RBAC-systeem.</p>
+                    <div className="panel-note"><Icon name="shield" size={16}/> De eerder gedeelde API-sleutels moeten buiten de chat worden vervangen. Behoud toegangsbeperking op Vercel.</div>
+                    <div className="panel-note"><Icon name="alert" size={16}/> De configuratiecontrole bewijst niet dat de Minecraft-JAR of back-ups op MC-Node goed werken.</div>
+                  </Section>
+                </div>
+              </>}
           </>}
           {cloudError&&<div className="notice warning" role="status"><Icon name="alert" size={18}/>{cloudError}</div>}
         </main>
