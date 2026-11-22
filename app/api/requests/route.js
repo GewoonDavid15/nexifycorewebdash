@@ -16,11 +16,12 @@ export async function POST(req){
   try{
     const text=await req.text();if(text.length>1000)return json({error:'Too large'},413);
     const body=JSON.parse(text);
-    if(body.action!=='backup.now')return json({error:'Action not allowed'},400);
+    if(!['backup.now','diagnostics.capture'].includes(body.action))return json({error:'Action not allowed'},400);
     if(Number(await redis('LLEN',keys.pending))>=10)return json({error:'Too many pending requests'},429);
-    const allowed=await redis('SET',keys.backupCooldown,'1','EX',60,'NX');
-    if(allowed!=='OK')return json({error:'Wacht 60 seconden voordat je opnieuw een back-up aanvraagt'},429);
-    const id=randomUUID();const record={id,action:'backup.now',created_at:new Date().toISOString(),state:'pending'};
+    const cooldown=body.action==='backup.now'?keys.backupCooldown:keys.diagnosticsCooldown;
+    const allowed=await redis('SET',cooldown,'1','EX',60,'NX');
+    if(allowed!=='OK')return json({error:'Wacht 60 seconden voordat je opnieuw deze actie aanvraagt'},429);
+    const id=randomUUID();const record={id,action:body.action,created_at:new Date().toISOString(),state:'pending'};
     await redis('SET',keys.request(id),JSON.stringify(record),'EX',2592000);
     await redis('LPUSH',keys.pending,id);
     await redis('LPUSH',keys.recent,id);await redis('LTRIM',keys.recent,0,49);
