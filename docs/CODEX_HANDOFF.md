@@ -75,3 +75,10 @@ De bestaande Cloud Bridge-back-upaanvraag heeft een browserbevestiging én een R
 De website gebruikt vastgepinde Next.js 16.4.6 en React 19.2.9, extra security headers, robots noindex en geüpdatete Git-ignore-regels. De laatst geverifieerde Vercel-build van deze code passeerde 22 tests en meldde READY; online MC-Node API-bereikbaarheid en de Minecraft heartbeat zijn **niet** extern bevestigd.
 
 **Nieuwe prioriteiten voor Codex:** behoud alle vier tabbladen; verbeter backenddiagnoses, rolgebaseerde toegang en observability zonder originele secrets te zien of op te slaan. Ontwerp een afzonderlijke connector voor ChatGPT-op-verzoek. Voeg nooit een willekeurige console-, schrijf-, reinstall- of restorefunctie toe zonder expliciete autorisatie en sterke beperkingen.
+
+
+## Aanvulling: beveiliging, accountbeheer en systeemcontrole
+
+Een nieuw afgeschermd dashboardtabblad **Systeemcontrole** bevat een read-only readiness-API (`/api/system/readiness`). Alleen na een geldige ondertekende sessie worden configuratiestatussen, een Redis-PING en het vervaltijdstip van de huidige sessie getoond, zonder geheime waarden. Het tabblad bevat een uitlogknop voor dit apparaat.
+
+Dit is **nog geen multi-account accountmanager**. De bestaande owner-login is bewust ongewijzigd; voor individuele staffaccounts en RBAC hoort een migratieplan met geteste sessie-intrekking, server-side permission checks en rollback. Zie GitHub Issue #3 en `docs/SECURITY_READINESS.md`.
