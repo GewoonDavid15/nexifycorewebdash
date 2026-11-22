@@ -27,3 +27,19 @@ test('unknown resource metrics do not generate false high usage alarms',()=>{
     {configured:true,connected:true,state:'running',memoryPercent:null,diskPercent:null});
   assert.deepEqual(messages,[]);
 });
+
+
+test('plugin startup preflight critical count is an actionable but non-destructive warning',()=>{
+  const alerts=analyzeHealth({online:true,status:{tps:20,mspt:15,startup_high:2,startup_warnings:5}},
+    {configured:true,connected:true,state:'running',memoryPercent:20,diskPercent:20});
+  assert.equal(alerts.length,1);
+  assert.equal(alerts[0].level,'warning');
+  assert.ok(alerts[0].title.includes('opstart'));
+});
+
+test('only noncritical preflight warnings are informational',()=>{
+  const alerts=analyzeHealth({online:true,status:{tps:20,mspt:10,startup_high:0,startup_warnings:3}},
+    {configured:true,connected:true,state:'running',memoryPercent:20,diskPercent:20});
+  assert.equal(alerts.length,1);
+  assert.equal(alerts[0].level,'info');
+});
