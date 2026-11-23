@@ -6,7 +6,8 @@ export async function GET(req){
   try{
     const raw=await redis('GET',keys.status);
     const status=raw?JSON.parse(raw):null;
-    const online=Boolean(status && Date.now()-Date.parse(status.received_at)<120000);
+    const age=status?Date.now()-Date.parse(status.received_at):NaN;
+    const online=Number.isFinite(age)&&age>=0&&age<120000;
     return json({online,status:online?status:null});
   }catch{return json({error:'Storage unavailable'},503);}
 }

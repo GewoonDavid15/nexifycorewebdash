@@ -6,8 +6,11 @@ export async function POST(req){
   if(!isAgent(req))return json({error:'Unauthorized'},401);
   try{
     const text=await req.text();if(text.length>6000)return json({error:'Too large'},413);
-    const incoming=JSON.parse(text);
-    if(incoming.server_id!=='main' || typeof incoming.plugin_version!=='string' || incoming.plugin_version.length>40)return json({error:'Invalid server'},400);
+    let incoming;
+    try{incoming=JSON.parse(text);}catch{return json({error:'Invalid JSON'},400);}
+    if(!incoming||typeof incoming!=='object'||Array.isArray(incoming)||incoming.server_id!=='main'||
+       typeof incoming.plugin_version!=='string'||!/^[A-Za-z0-9._+\-]{1,40}$/.test(incoming.plugin_version))
+      return json({error:'Invalid server'},400);
     const numeric=['tps','mspt','heap_used_mib','heap_max_mib','players','ping_ms','chunks','cpu_pct','uptime_seconds','max_players','java_major','startup_high','startup_warnings'];
     const safe={server_id:'main',plugin_version:incoming.plugin_version,received_at:new Date().toISOString()};
     for(const key of numeric){const value=incoming[key];safe[key]=typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<1e9?value:null;}
