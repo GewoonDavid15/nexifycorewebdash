@@ -60,3 +60,15 @@ test('missing private source fails closed, never pretending compatibility',async
     assert.ok(result.problems.some(p=>p.includes('Java Cloud Bridge')));
   }finally{await rm(root,{recursive:true,force:true});}
 });
+
+test('weak 36-character request-id validation is rejected',async()=>{
+  const root=await fixture();
+  try{
+    const path=join(root,javaPath,'NexifyCloudBridge.java');
+    const strict='id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")';
+    await writeFile(path,files[javaPath+'/NexifyCloudBridge.java'].replace(strict,'id.matches("[0-9a-f-]{36}")'));
+    const result=await verifyCloudContract({javaRoot:root,webRoot:root});
+    assert.equal(result.ok,false);
+    assert.ok(result.problems.some(p=>p.includes('UUID')));
+  }finally{await rm(root,{recursive:true,force:true});}
+});
