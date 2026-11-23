@@ -89,7 +89,16 @@ async function check(){
       keys.pending,keys.backupCooldown,keys.diagnosticsCooldown,keys.recent);
     await cmd('SET',requestKey,JSON.stringify(record('backup.now',new Date(now-21*60*1000).toISOString())));
     await cmd('LPUSH',keys.pending,id);
+    const prior=await adapter('LRANGE',keys.pending,0,49);
     const pruned=await prunePending(adapter,now);
+    if(pruned.removed!==1){
+      console.error('Prune integration diagnostic',JSON.stringify({
+        listLength:prior.length,firstIdMatches:prior[0]===id,
+        live:pruned.live.length,removed:pruned.removed,
+        resultingState:JSON.parse(await cmd('GET',requestKey)).state,
+        afterLength:Number(await cmd('LLEN',keys.pending))
+      }));
+    }
     assert.equal(pruned.removed,1);
     assert.equal(await cmd('LLEN',keys.pending),'0');
     assert.equal(JSON.parse(await cmd('GET',requestKey)).state,'expired');
