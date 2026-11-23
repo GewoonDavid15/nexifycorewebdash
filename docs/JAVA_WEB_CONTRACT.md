@@ -22,3 +22,9 @@ De check inspecteert:
 **Grenzen:** dit is een statische contractcontrole; hij bewijst niet dat JSON-velden exact hetzelfde worden verwerkt, dat de Java-plugin daadwerkelijk compileert, dat Redis werkt, of dat Paper 26.3 op Java 25 start. De bestaande GitHub Actions-tests toetsen de contractchecker op gesimuleerde Java-bronbestanden. De echte private broncode moet lokaal worden gecontroleerd of via een veilige interne buildworkflow.
 
 Wijzig bestaande werelden, Paper-installaties of Nexify SQLite-bestanden pas na externe herstelbare back-up en een succesvolle stagingtest. Deel geen API-sleutels in GitHub of de chat.
+
+## Aanvulling: exacte aanvraag-ID's
+
+De contractchecker controleert nu ook dat de private Java-agent het volledige UUID-patroon met vijf hexgroepen gebruikt (8-4-4-4-12), en niet alleen een willekeurige reeks van 36 hextekens en streepjes. De bijbehorende Java-broncodepatch heeft aparte broncode-regressietests. De originele 2.0.1-broncodebundel wordt niet stilzwijgend overschreven; bewaar het nieuwe patch-archief afzonderlijk en controleer de gewijzigde hashes in `PATCH_SHA256.json`.
+
+Een geslaagde statische controle maakt van de broncode **nog geen nieuwe JAR** en bewijst geen succesvolle Paper/Java 25-runtime.
