@@ -9,7 +9,7 @@ const uptime=(v)=>typeof v==='number'&&v>=0?Math.floor(v/3600000)+'u '+Math.floo
 const dt=v=>{if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('nl-NL',{dateStyle:'short',timeStyle:'short'});};
 const time=v=>{if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});};
 const labelForState=s=>({running:'Online',starting:'Start op',stopping:'Sluit af',offline:'Offline',unknown:'Onbekend'})[s]||'Onbekend';
-const permissionLabel=s=>({available:'Beschikbaar',forbidden:'Geen rechten',unavailable:'Niet beschikbaar',not_found:'Niet gevonden',rate_limited:'Tijdelijk beperkt'})[s]||'Niet gecontroleerd';
+const permissionLabel=s=>({available:'Beschikbaar',forbidden:'Geen rechten',unavailable:'Niet beschikbaar',not_found:'Niet gevonden',rate_limited:'Tijdelijk beperkt',invalid_key:'API-sleutel afgewezen',timeout:'Verbinding verlopen',invalid_response:'Ongeldig API-antwoord'})[s]||'Niet gecontroleerd';
 function Icon({name,size=20}){
   const shared={width:size,height:size,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':true};
   const paths={
