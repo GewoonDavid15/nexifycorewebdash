@@ -28,3 +28,19 @@ Wijzig bestaande werelden, Paper-installaties of Nexify SQLite-bestanden pas na 
 De contractchecker controleert nu ook dat de private Java-agent het volledige UUID-patroon met vijf hexgroepen gebruikt (8-4-4-4-12), en niet alleen een willekeurige reeks van 36 hextekens en streepjes. De bijbehorende Java-broncodepatch heeft aparte broncode-regressietests. De originele 2.0.1-broncodebundel wordt niet stilzwijgend overschreven; bewaar het nieuwe patch-archief afzonderlijk en controleer de gewijzigde hashes in `PATCH_SHA256.json`.
 
 Een geslaagde statische controle maakt van de broncode **nog geen nieuwe JAR** en bewijst geen succesvolle Paper/Java 25-runtime.
+
+
+## Offline Java-buildcontrole — 23 november 2026
+
+De gepatchte Java-broncode is lokaal met OpenJDK/javac **21.0.12.1** gecompileerd. Hiervoor zijn uitsluitend de Paper API-bibliotheken uit de eerdere experimentele Nexify-serverbundel gebruikt als compile-time dependencies. Het resultaat was een **controlebuild** van NexifyStaff 2.4.0:
+
+- NexifyCloudBridge.class aanwezig; class-versie 65 (Java 21)
+- plugin.yml aanwezig met versie 2.4.0
+- 39 ZIP/JAR-entries; integriteitscontrole geslaagd
+- SHA-256 van de controlebuild: 1f33d11169e4a58bf3d5cd8bb71d39956eed1f48bd6e2825df8453320ede0bed
+
+Dit bewijst alleen dat de aangepaste Java-plugin compileert tegen de beschikbare API-klassen. Het is **geen** herbouw van Paper 26.3, geen originele Paperclip-release en geen geslaagde Minecraft/Java 25-stagingtest. De controle-JAR is bewust niet toegevoegd aan deze publieke GitHub-repository.
+
+De afzonderlijke private broncode-ZIP is uitgebreid met een verbeterde buildwrapper: bouwen in een tijdelijke map, vier JAR's controleren, manifest genereren en pas daarna de volledige release atomisch naar een **nieuwe** uitvoermap verplaatsen. Tien Python-broncode-/buildwrappertests zijn geslaagd. Het script weigert de eigen Nexify-wrapper als vervanging voor een originele Paperclip-JAR.
+
+De echte nieuwe serverbundel kan pas worden uitgebracht met de originele Paper 26.3 build 257 input en een geslaagde Java 25-stagingtest. Installeer de controlebuild niet op MC-Node.
