@@ -25,6 +25,40 @@ globalThis.fetch=async (_url,opts)=>{
       memory.set(key,val);result='OK';break;
     }
     case 'GET':result=memory.get(args[0])??null;break;
+    case 'EVAL':{
+      const [script,count,...rest]=args;
+      if(script.includes('NEXIFY_PRUNE_PENDING_V1')){
+        const [recordKey,pendingKey,expected,next,id]=rest;
+        const current=memory.get(recordKey)??'';
+        if(current!==expected){result=0;break;}
+        if(next)memory.set(recordKey,next);
+        lists.set(pendingKey,(lists.get(pendingKey)||[]).filter(v=>v!==id));
+        result=1;break;
+      }
+      if(Number(count)===4){
+        const [pendingKey,cooldown,requestKey,recentKey,id,record,maxPending,cooldownTtl,recordTtl]=rest;
+        assert.equal(typeof script,'string');
+        assert.ok(Number(cooldownTtl)>0&&Number(recordTtl)>0);
+        if((lists.get(pendingKey)||[]).length>=Number(maxPending)){result=-1;break;}
+        if(memory.has(cooldown)){result=0;break;}
+        if(memory.has(requestKey)){result=-2;break;}
+        memory.set(cooldown,'1');
+        memory.set(requestKey,record);
+        lists.set(pendingKey,[id,...(lists.get(pendingKey)||[])]);
+        lists.set(recentKey,[id,...(lists.get(recentKey)||[])].slice(0,50));
+        result=1;break;
+      }
+      const [requestKey,pendingKey,oldRaw,newRaw,id,ttl]=rest;
+      assert.equal(Number(count),2);
+      assert.equal(typeof script,'string');
+      assert.ok(Number(ttl)>0);
+      const current=memory.get(requestKey);
+      if(current===undefined){result=-1;break;}
+      if(current!==oldRaw){result=0;break;}
+      memory.set(requestKey,newRaw);
+      lists.set(pendingKey,(lists.get(pendingKey)||[]).filter(v=>v!==id));
+      result=1;break;
+    }
     case 'DEL':result=memory.delete(args[0])?1:0;break;
     case 'LRANGE':{
       const a=lists.get(args[0])||[];result=a.slice(args[1],args[2]+1);break;

@@ -16,6 +16,15 @@ function mockRedis(initialIds,records) {
       switch(name){
         case 'LRANGE':return ids.slice(args[1],args[2]+1);
         case 'GET':return data.get(args[0])??null;
+        case 'EVAL':{
+          const [script,count,recordKey,pendingKey,expected,next,id]=args;
+          if(!script.includes('NEXIFY_PRUNE_PENDING_V1')||count!==2)throw Error('Unexpected Lua script');
+          const current=data.get(recordKey)??'';
+          if(current!==expected)return 0;
+          if(next)data.set(recordKey,next);
+          ids=ids.filter(v=>v!==id);
+          return 1;
+        }
         case 'SET':data.set(args[0],args[1]);return 'OK';
         case 'LREM':{const count=ids.length;ids=ids.filter(v=>v!==args[2]);return count-ids.length;}
         default:throw Error('Unexpected redis command '+name);
@@ -43,7 +52,7 @@ test('old backup request expires and is never returned for execution',async()=>{
   assert.equal(previous.state,'expired');
   assert.equal(previous.action,'backup.now');
   assert.ok(previous.expired_at);
-  assert.ok(mem.calls.every(x=>['LRANGE','GET','SET','LREM'].includes(x[0])));
+  assert.ok(mem.calls.every(x=>['LRANGE','GET','EVAL','LREM'].includes(x[0])));
 });
 
 test('missing, completed and malformed requests are pruned from the pending list',async()=>{
@@ -76,4 +85,30 @@ test('unrecognized action is removed but never executed',async()=>{
   const done=await prunePending(mem.command,now);
   assert.deepEqual(done.live,[]);
   assert.deepEqual(mem.ids(),[]);
+});
+
+test('atomic pruning cannot overwrite an acknowledgement received after the initial read',async()=>{
+  const now=Date.now(),id=uid('9');
+  const old=JSON.stringify(request(id,'backup.now',now-MAX_PENDING_AGE_MS-1000));
+  const acknowledged=JSON.stringify({...JSON.parse(old),state:'awaiting_console',local_id:123});
+  let current=old;
+  let evalCount=0;
+  const redisFn=async(command,...args)=>{
+    if(command==='LRANGE')return [id];
+    if(command==='GET')return old;
+    if(command==='EVAL'){
+      evalCount++;
+      // Simulate an agent confirming the request between GET and Redis EVAL.
+      current=acknowledged;
+      const expected=args[4];
+      assert.notEqual(current,expected);
+      return 0;
+    }
+    throw Error('Unexpected command '+command);
+  };
+  const outcome=await prunePending(redisFn,now);
+  assert.equal(evalCount,1);
+  assert.equal(outcome.removed,0);
+  assert.deepEqual(outcome.live,[]);
+  assert.equal(JSON.parse(current).state,'awaiting_console');
 });
