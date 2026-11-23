@@ -18,7 +18,12 @@ async function cmd(...args){
   if(result.startsWith('ERR ')||result.startsWith('WRONGTYPE '))throw Error('Redis rejected command');
   return result;
 }
-async function adapter(op,...args){return cmd(op,...args);}
+async function adapter(op,...args){
+  const value=await cmd(op,...args);
+  if(op==='LRANGE')return value?value.split('\\n'):[];
+  if(op==='GET')return value||null;
+  return value;
+}
 const id=randomUUID(),requestKey=keys.request(id);
 const now=Date.now();
 const record=(action,created_at=new Date(now).toISOString())=>({id,action,state:'pending',created_at});
