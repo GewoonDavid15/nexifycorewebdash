@@ -39,6 +39,8 @@ export async function verifyCloudContract({javaRoot,webRoot=resolve('.'),reader=
   }
   if(!approvals.includes('SELECT local_id FROM cloud_remote_requests WHERE remote_id=?'))
     problems.push('Java cloud backup deduplication not found');
+  const uuidGuard='id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")';
+  if(!bridge.includes(uuidGuard))problems.push('Java Cloud Bridge must validate strict request UUID shape');
   if(!bridge.includes('HttpClient.Redirect.NEVER'))
     problems.push('Java must refuse cloud HTTP redirects');
   if(!bridge.includes('databaseQueue.execute(()->accept(id))'))
