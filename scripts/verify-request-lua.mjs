@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {transitionRequest} from '../lib/request-transitions.js';
 import {createRequest} from '../lib/request-creation.js';
+import {prunePending} from '../lib/queue.js';
 import {keys} from '../lib/redis.js';
 
 const exec=promisify(execFile);
@@ -81,7 +82,13 @@ async function check(){
     assert.equal(await cmd('LLEN',keys.pending),'10');
     await cmd('DEL',...createdIds.map(keys.request),...finalIds.map(keys.request),
       keys.pending,keys.backupCooldown,keys.diagnosticsCooldown,keys.recent);
-    console.log('Real Redis 7: atomic transitions, cooldown, queue capacity and concurrent creation PASS');
+    await cmd('SET',requestKey,JSON.stringify(record('backup.now',new Date(now-21*60*1000).toISOString())));
+    await cmd('LPUSH',keys.pending,id);
+    const pruned=await prunePending(adapter,now);
+    assert.equal(pruned.removed,1);
+    assert.equal(await cmd('LLEN',keys.pending),'0');
+    assert.equal(JSON.parse(await cmd('GET',requestKey)).state,'expired');
+    console.log('Real Redis 7: atomic transitions, creation, cooldown, queue capacity and pruning PASS');
   }finally{
     await cmd('DEL',requestKey,keys.pending);
   }
