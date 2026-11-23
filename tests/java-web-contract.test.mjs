@@ -9,6 +9,7 @@ const javaPath='nexify-paper-v2.1/src/main/java/nl/nexify/staff';
 const files={
   [javaPath+'/NexifyCloudBridge.java']:`
     HttpClient.Redirect.NEVER;
+    id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     request("/api/agent/sync", "{}");
     request("/api/agent/ack", "{}");
     request("/api/agent/report", "{}");
