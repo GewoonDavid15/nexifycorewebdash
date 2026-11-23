@@ -86,3 +86,29 @@ test('unrecognized action is removed but never executed',async()=>{
   assert.deepEqual(done.live,[]);
   assert.deepEqual(mem.ids(),[]);
 });
+
+test('atomic pruning cannot overwrite an acknowledgement received after the initial read',async()=>{
+  const now=Date.now(),id=uid('9');
+  const old=JSON.stringify(request(id,'backup.now',now-MAX_PENDING_AGE_MS-1000));
+  const acknowledged=JSON.stringify({...JSON.parse(old),state:'awaiting_console',local_id:123});
+  let current=old;
+  let evalCount=0;
+  const redisFn=async(command,...args)=>{
+    if(command==='LRANGE')return [id];
+    if(command==='GET')return old;
+    if(command==='EVAL'){
+      evalCount++;
+      // Simulate an agent confirming the request between GET and Redis EVAL.
+      current=acknowledged;
+      const expected=args[4];
+      assert.notEqual(current,expected);
+      return 0;
+    }
+    throw Error('Unexpected command '+command);
+  };
+  const outcome=await prunePending(redisFn,now);
+  assert.equal(evalCount,1);
+  assert.equal(outcome.removed,0);
+  assert.deepEqual(outcome.live,[]);
+  assert.equal(JSON.parse(current).state,'awaiting_console');
+});
