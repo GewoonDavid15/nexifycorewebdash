@@ -20,7 +20,7 @@ async function cmd(...args){
 }
 async function adapter(op,...args){
   const value=await cmd(op,...args);
-  if(op==='LRANGE')return value?value.split('\\n'):[];
+  if(op==='LRANGE')return value?value.split(String.fromCharCode(10)):[];
   if(op==='GET')return value||null;
   return value;
 }
