@@ -27,6 +27,14 @@ globalThis.fetch=async (_url,opts)=>{
     case 'GET':result=memory.get(args[0])??null;break;
     case 'EVAL':{
       const [script,count,...rest]=args;
+      if(script.includes('NEXIFY_PRUNE_PENDING_V1')){
+        const [recordKey,pendingKey,expected,next,id]=rest;
+        const current=memory.get(recordKey)??'';
+        if(current!==expected){result=0;break;}
+        if(next)memory.set(recordKey,next);
+        lists.set(pendingKey,(lists.get(pendingKey)||[]).filter(v=>v!==id));
+        result=1;break;
+      }
       if(Number(count)===4){
         const [pendingKey,cooldown,requestKey,recentKey,id,record,maxPending,cooldownTtl,recordTtl]=rest;
         assert.equal(typeof script,'string');
