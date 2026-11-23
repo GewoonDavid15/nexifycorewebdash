@@ -92,3 +92,20 @@ Follow priorities in `docs/CODEX_HANDOFF.md` and the user's next explicit reques
 - `app/api/system/roles/route.js` and the Systeemcontrole role cards are **read-only previews**, requiring the existing admin session. `enabled:false` means no new web accounts can sign in.
 - Do not wire role sessions to production routes or change the owner's current credentials without a full staging migration, per-route auth tests, account/2FA enrollment and verified rollback. Read `docs/RBAC_FOUNDATION.md` and GitHub Issue #3.
 - Last RBAC foundation verification: **59 automated tests passed**; this does not prove multiuser login is live.
+
+
+## Enterprise 3.0 identity storage — feature branch, NOT enabled
+- Read `docs/IDENTITY_STORAGE.md`. Identity storage and MFA are **staged internal libraries**, not public HTTP write endpoints.
+- `lib/account-store.js` uses Redis Lua scripts to atomically reserve unique account usernames and CAS-update delegated roles/suspensions. Actor authority is checked against persisted Redis data at invocation AND within the Lua mutation.
+- `lib/account-vault.js` prepares per-user TOTP with AES-256-GCM, a dedicated `NEXIFY_ACCOUNT_VAULT_KEY` and authenticated account UUID. This key is **not configured for production**.
+- Never add new account login, invitations, staff management or privileged write routes until real per-user auth, owner bootstrap, MFA enrollment and role enforcement on every route have staging tests and explicit approval.
+- The old owner's password+TOTP session remains untouched. No account migration or production Redis mutation has been authorized in this branch.
+- Pull requests should run the GitHub Actions test suite. Vercel may be rate-limited; don't claim deployment without a READY result from the exact commit.
+
+
+## Identity enrollment & real Redis CI (draft PR #4)
+- `lib/account-activation.js`: internal, atomic invite+MFA/password enrollment. Never call the old `consumeInvitationToken` as a separate first step before enrollment.
+- `lib/account-login.js`: internal username+scrypt+decrypted per-user TOTP check, per-account Redis TOTP replay key, then revocable hashed-token session. No HTTP routes or active users yet.
+- `scripts/verify-redis-lua.mjs` is a CI-only **localhost** Redis 7 integration test, using ephemeral key prefixes and no production credentials. CI runs it in a temporary Redis service container.
+- Verified at PR stage: **91/91 Node tests**, real Redis Lua account/invite/activate/revoke/replay checks passed, and Next.js build passed. Does not imply Upstash provider staging or MC-Node availability.
+- Do not enable any multiuser login without shared production-grade server-side authorization across routes, CSRF/rate limits, email/invite delivery controls, proper vault key management, and staged owner recovery.
