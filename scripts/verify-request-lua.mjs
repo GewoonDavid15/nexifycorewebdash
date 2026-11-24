@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {transitionRequest} from '../lib/request-transitions.js';
 import {createRequest} from '../lib/request-creation.js';
 import {prunePending} from '../lib/queue.js';
+import {verifyIsolatedCloudbridgeStaging} from './probe-cloudbridge-staging.mjs';
 import {keys} from '../lib/redis.js';
 
 const exec=promisify(execFile);
@@ -102,7 +103,20 @@ async function check(){
     assert.equal(pruned.removed,1);
     assert.equal(await cmd('LLEN',keys.pending),'0');
     assert.equal(JSON.parse(await cmd('GET',requestKey)).state,'expired');
-    console.log('Real Redis 7: atomic transitions, creation, cooldown, queue capacity and pruning PASS');
+    // Exercise the Upstash REST command-array shape against real temporary Redis.
+    const probeResult=await verifyIsolatedCloudbridgeStaging({
+      url:'https://redis.staging.example/',
+      token:'local-redis-integration-test-only',
+      productionUrls:['https://redis.production.example/'],
+      fetchFn:async(_url,options)=>{
+        const args=JSON.parse(options.body);
+        const value=await cmd(...args);
+        return Response.json({result:value});
+      }
+    });
+    assert.equal(probeResult.ok,true);
+    assert.equal(probeResult.checked.length,5);
+    console.log('Real Redis 7: atomic transitions, creation, cooldown, queue capacity, pruning and REST staging probe PASS');
   }finally{
     await cmd('DEL',requestKey,keys.pending);
   }
