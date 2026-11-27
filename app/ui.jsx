@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState,useCallback,useMemo} from 'react';
 import {analyzeHealth} from '../lib/health.js';
+import {connectionAdvice} from '../lib/connection-advice.js';
 
 const TABS=[{id:'overview',label:'Overzicht',icon:'◫'},{id:'hosting',label:'MC-Node hosting',icon:'▣'},{id:'backups',label:'Back-ups & taken',icon:'▤'},{id:'activity',label:'Activiteit',icon:'◷'},{id:'system',label:'Systeemcontrole',icon:'◇'}];
 const num=(v,places=0)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('nl-NL',{maximumFractionDigits:places,minimumFractionDigits:places}):'—';
@@ -291,6 +292,15 @@ export default function Dashboard({initialAuthorized}){
                       <Status good={item.status==='ready'} muted={item.status==='optional'}>{item.status==='ready'?'Ingesteld':item.status==='optional'?'Optioneel':item.status==='invalid'?'Ongeldig':'Ontbreekt'}</Status>
                     </div>)}
                   </div>
+                </Section>
+                <Section title="Verbindingshulp" subtitle="Gerichte stappen bij ontbrekende heartbeat of MC-Node-storing. Alleen-lezen; geen geheime waarden of serverwijzigingen.">
+                  <div className="readiness-list">
+                    {connectionAdvice({readiness,status,mcnode,cloudError,hostError}).map(item=><div className="readiness-item" key={item.id}>
+                      <div className="readiness-detail"><strong>{item.title}</strong><p>{item.detail}</p></div>
+                      <Status good={item.id==='connected'} muted={item.id!=='connected'}>{item.id==='connected'?'Verbonden':'Controleren'}</Status>
+                    </div>)}
+                  </div>
+                  <div className="panel-note"><Icon name="shield" size={16}/> Deze hulp verandert geen instellingen, plaatst geen nieuwe plugins en verstuurt geen sleutels naar de browser.</div>
                 </Section>
                 <Section title="Rollen & accountrechten" subtitle="Voorbereid rechtenmodel. Nieuwe staffaccounts en uitnodigingen zijn nog niet ingeschakeld.">
                   {rolesPreview?.mode==='preview'?<div className="role-preview-grid">
